@@ -96,7 +96,12 @@ Distinct UI states:
 
 Retries only re-read receipts/state; they never resubmit a write automatically. A page refresh reconciles from the transaction hash and contract state.
 
-Visual direction will be researched independently before UI implementation: calm scientific registry, high-contrast status chips, compact evidence cards, and mobile-first layout. Reference sites influence visual hierarchy only, not functionality or copy.
+Approved visual references are the shadcn dashboard, Aceternity components,
+Vercel's shadcn admin template, and the recreated Linear UI kit on Figma. Only
+derived principles are used: a compact dashboard shell, graphite surfaces,
+hairline borders, Geist/Inter-style typography, restrained violet-blue accent,
+clear status chips, and subtle motion limited to consensus progress and hover.
+No reference assets, copy, component code, or product behavior are copied.
 
 ## Architecture and repository structure
 
