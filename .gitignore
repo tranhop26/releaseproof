@@ -8,6 +8,7 @@ __pycache__/
 .artifacts/
 node_modules/
 dist/
+*.tsbuildinfo
 coverage/
 playwright-report/
 test-results/
