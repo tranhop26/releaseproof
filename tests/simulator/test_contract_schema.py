@@ -1,0 +1,52 @@
+import ast
+from pathlib import Path
+
+from glsim.server import create_app
+from starlette.testclient import TestClient
+
+from conftest import CONTRACT_PATH
+
+
+EXPECTED_METHODS = {
+    "submit_case",
+    "resolve_case",
+    "get_case",
+    "get_case_count",
+    "get_case_id_by_binding",
+}
+FORBIDDEN_METHODS = {
+    "upgrade",
+    "upgrade_to",
+    "set_code",
+    "admin",
+    "owner",
+    "delete_case",
+    "edit_result",
+}
+
+
+def test_public_schema_is_intentionally_frozen():
+    app = create_app(num_validators=1, max_rotations=1)
+    with TestClient(app):
+        engine = app.state.engine
+        address, _ = engine.deploy(CONTRACT_PATH)
+        assert engine.call_method(address, "get_case_count") == 0
+
+        module = ast.parse(Path(CONTRACT_PATH).read_text(encoding="utf-8"))
+        contract = next(
+            node
+            for node in module.body
+            if isinstance(node, ast.ClassDef) and node.name == "ReleaseProof"
+        )
+        method_names = {
+            method.name
+            for method in contract.body
+            if isinstance(method, ast.FunctionDef)
+            and any(
+                ast.unparse(decorator) in {"gl.public.write", "gl.public.view"}
+                for decorator in method.decorator_list
+            )
+        }
+
+        assert method_names == EXPECTED_METHODS
+        assert method_names.isdisjoint(FORBIDDEN_METHODS)

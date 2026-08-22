@@ -4,7 +4,11 @@ version = "0.1.0"
 description = "GenLayer reproducibility evidence registry"
 requires-python = ">=3.14"
 dependencies = [
-  "genlayer-test==0.29.2",
+  "genlayer-test[sim]==0.29.2",
+  "fastapi==0.141.1",
+  "starlette==0.52.1",
+  "httpx==0.28.1",
+  "numpy==2.5.2",
 ]
 
 [tool.pytest.ini_options]
