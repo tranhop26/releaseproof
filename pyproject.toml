@@ -11,6 +11,12 @@ dependencies = [
   "numpy==2.5.2",
 ]
 
+[project.optional-dependencies]
+dev = []
+
+[tool.setuptools]
+packages = []
+
 [tool.pytest.ini_options]
 testpaths = ["tests/direct", "tests/simulator"]
 strict_config = true
