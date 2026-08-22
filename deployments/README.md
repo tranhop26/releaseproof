@@ -1,5 +1,7 @@
 # Deployments
 
-`studionet.json` is created only after a real deployment is finalized and its
-source, schema, and initial `get_case_count` readback have been verified. No
-placeholder address is committed.
+`studionet.json` records the finalized ReleaseProof deployment. Its source is
+equivalent to the repository source after CRLF/LF normalization (Studio stores
+editor text with CRLF); `sourceSha256` hashes the exact source returned on-chain.
+The schema matches the pinned runtime source and the initial finalized
+`get_case_count` readback was `0`. No placeholder address is committed.

@@ -25,6 +25,12 @@ FORBIDDEN_METHODS = {
 }
 
 
+def test_runtime_dependency_is_content_pinned():
+    source = Path(CONTRACT_PATH).read_text(encoding="utf-8")
+    assert '"Depends": "py-genlayer:latest"' not in source
+    assert '"Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6"' in source
+
+
 def test_public_schema_is_intentionally_frozen():
     app = create_app(num_validators=1, max_rotations=1)
     with TestClient(app):

@@ -65,7 +65,7 @@ Deployment is an explicit, confirmed operation:
 
 ```powershell
 npm run deploy:studionet
-vercel --prod --token $env:VERCEL_TOKEN
+vercel --prod
 ```
 
 The contract script waits for finalization, verifies deployed source/schema and
@@ -74,7 +74,12 @@ as `VITE_GENLAYER_CONTRACT_ADDRESS` before building the frontend. In the app,
 connect an injected wallet, submit `owner/repository`, a 40-character commit, a
 Markdown path, and the raw file SHA-256; then resolve or read the case by ID.
 
-The live actor/action/transaction/readback table is populated from
-`docs/evidence-template.md` only after deployment. Current limitations: public
+Studionet deployment: [`0x10aE8E49717D9E90398F9E783bf6db7d25Be1A69`](https://explorer-studio.genlayer.com/address/0x10aE8E49717D9E90398F9E783bf6db7d25Be1A69),
+created by [transaction `0xf4cc77…48ae16`](https://explorer-studio.genlayer.com/tx/0xf4cc77fc4503233dcb7be2b5655fb1e253deb3d08e3fb2b47e3289060948ae16).
+The finalized deployment metadata and on-chain source hash are recorded in
+`deployments/studionet.json`.
+
+The live actor/action/transaction/readback table is recorded in `docs/evidence.md`
+after the production exercise. Current limitations: public
 GitHub Markdown only, 32 KiB maximum, one frozen policy, no custody or payments,
 and no appeal/edit path for terminal decisions.
