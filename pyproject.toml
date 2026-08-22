@@ -1,0 +1,14 @@
+[project]
+name = "releaseproof"
+version = "0.1.0"
+description = "GenLayer reproducibility evidence registry"
+requires-python = ">=3.14"
+dependencies = [
+  "genlayer-test==0.29.2",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/direct", "tests/simulator"]
+strict_config = true
+strict_markers = true
+filterwarnings = ["error"]

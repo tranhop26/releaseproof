@@ -1,1 +1,14 @@
 .worktrees/
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+.pytest_cache/
+.artifacts/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+deployments/*.local.json
