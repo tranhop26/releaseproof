@@ -4,12 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "check:scripts": "tsc --noEmit",
+    "deploy:studionet": "tsx scripts/deploy.ts",
     "test:scripts": "vitest run scripts"
   },
   "dependencies": {
     "genlayer-js": "1.1.8"
   },
   "devDependencies": {
+    "@types/node": "24.10.1",
     "tsx": "4.20.6",
     "typescript": "7.0.2",
     "vitest": "4.1.11"
