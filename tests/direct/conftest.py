@@ -31,3 +31,21 @@ if os.name == "nt":
 
     loader._inject_message_to_fd0 = _windows_safe_inject_message
     VMContext._cleanup_after_deactivate = _windows_safe_cleanup
+
+
+_original_warp = VMContext.warp
+
+
+def _refresh_datetime_on_warp(self, timestamp):
+    """Mirror the per-transaction message refresh used by the real runtime."""
+    _original_warp(self, timestamp)
+    try:
+        from genlayer import gl
+
+        if gl.message_raw is not None:
+            gl.message_raw["datetime"] = timestamp
+    except ImportError:
+        pass
+
+
+VMContext.warp = _refresh_datetime_on_warp
