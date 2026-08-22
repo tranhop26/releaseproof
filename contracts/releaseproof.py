@@ -119,7 +119,11 @@ class ReleaseProof(gl.Contract):
             state=SUBMITTED,
             outcome="",
             reason="",
-            criteria_json="{}",
+            criteria_json=json.dumps(
+                {name: False for name in _CRITERION_NAMES},
+                separators=(",", ":"),
+                sort_keys=True,
+            ),
             resolver="",
             resolved_at="",
             canonical_url=canonical_url,

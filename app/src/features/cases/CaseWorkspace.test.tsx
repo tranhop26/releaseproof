@@ -25,6 +25,12 @@ describe("CaseWorkspace", () => {
     expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
   });
 
+  it("enables submission when the wallet connects after initial render", () => {
+    const view = render(<CaseWorkspace initialPhase="disconnected" />);
+    view.rerender(<CaseWorkspace initialPhase="idle" />);
+    expect(screen.getByRole("button", { name: "Submit evidence" })).toBeEnabled();
+  });
+
   it("shows field errors without issuing a write", () => {
     render(<CaseWorkspace initialPhase="idle" />);
     fireEvent.click(screen.getByRole("button", { name: "Submit evidence" }));

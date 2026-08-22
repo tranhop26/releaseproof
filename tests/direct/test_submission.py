@@ -30,6 +30,12 @@ def test_submit_stores_immutable_binding(direct_vm, direct_deploy):
     assert case["evidence_hash"] == VALID_DIGEST
     assert case["state"] == "SUBMITTED"
     assert case["outcome"] == ""
+    assert case["criteria"] == {
+        "question": False,
+        "procedure": False,
+        "results": False,
+        "limitations": False,
+    }
     assert case["policy_version"] == "reproducibility-v1"
     assert case["schema_version"] == "releaseproof-case-v1"
     assert contract.get_case_count() == 1

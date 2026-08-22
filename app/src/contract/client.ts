@@ -1,6 +1,6 @@
 import { createClient as createGenLayerClient } from "genlayer-js";
 
-import { configuredChain, requireContractAddress } from "./config";
+import { configuredChain, configuredEndpoint, requireContractAddress } from "./config";
 import {
   caseRecordSchema,
   submissionInputSchema,
@@ -40,8 +40,32 @@ function requireHash(value: unknown): TransactionHash {
   return value as TransactionHash;
 }
 
+function normalizeReceipt(value: unknown) {
+  if (!value || typeof value !== "object") return value;
+  const receipt = value as Record<string, unknown>;
+  const consensus = receipt.consensus_data as
+    | { leader_receipt?: Array<Record<string, unknown>> }
+    | undefined;
+  const leader = consensus?.leader_receipt?.[0];
+  const leaderResult = leader?.result as { status?: string } | undefined;
+  let executionResult = receipt.txExecutionResultName;
+  if (!executionResult && leader?.execution_result === "SUCCESS" && leaderResult?.status === "return") {
+    executionResult = "FINISHED_WITH_RETURN";
+  } else if (!executionResult && leader?.execution_result && leader.execution_result !== "SUCCESS") {
+    executionResult = "FINISHED_WITH_ERROR";
+  }
+  return {
+    ...receipt,
+    statusName: receipt.statusName ?? receipt.status_name,
+    txExecutionResultName: executionResult,
+  };
+}
+
 export function createReadClient(): ContractClientLike {
-  return createGenLayerClient({ chain: configuredChain() }) as ContractClientLike;
+  return createGenLayerClient({
+    chain: configuredChain(),
+    endpoint: configuredEndpoint(),
+  }) as ContractClientLike;
 }
 
 export function createWalletClient(
@@ -53,6 +77,7 @@ export function createWalletClient(
   }
   return createGenLayerClient({
     chain: configuredChain(),
+    endpoint: configuredEndpoint(),
     account: address as ContractAddress,
     provider: provider as never,
   }) as ContractClientLike;
@@ -121,8 +146,10 @@ export function createReleaseProofApi(
       return value;
     },
 
-    waitForReceipt(hash: TransactionHash) {
-      return client.waitForTransactionReceipt({ hash, waitUntil: "finalized" });
+    async waitForReceipt(hash: TransactionHash) {
+      return normalizeReceipt(
+        await client.waitForTransactionReceipt({ hash, waitUntil: "finalized" }),
+      );
     },
   };
 }

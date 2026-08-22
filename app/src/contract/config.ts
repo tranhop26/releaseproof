@@ -19,6 +19,19 @@ export function configuredContractAddress(): ContractAddress {
   return requireContractAddress(import.meta.env.VITE_GENLAYER_CONTRACT_ADDRESS);
 }
 
+export function requireRpcEndpoint(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  const endpoint = new URL(value);
+  if (!(["http:", "https:"] as string[]).includes(endpoint.protocol)) {
+    throw new Error("GenLayer RPC endpoint must use HTTP or HTTPS");
+  }
+  return endpoint.toString();
+}
+
+export function configuredEndpoint(): string | undefined {
+  return requireRpcEndpoint(import.meta.env.VITE_GENLAYER_RPC_URL);
+}
+
 export function configuredChain() {
   const network = import.meta.env.VITE_GENLAYER_NETWORK ?? "studionet";
   if (network === "localnet") {

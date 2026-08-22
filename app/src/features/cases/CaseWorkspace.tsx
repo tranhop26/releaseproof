@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import type { ReleaseProofApi } from "../../contract/client";
 import type { CaseRecord, SubmissionInput, TransactionHash } from "../../contract/types";
@@ -42,6 +42,12 @@ export function CaseWorkspace({
   const [error, setError] = useState("");
   const connected = phase !== "disconnected";
   const busy = ["signing", "pending", "finalized"].includes(phase);
+
+  useEffect(() => {
+    if (initialPhase === "idle") {
+      setPhase((current) => current === "disconnected" ? "idle" : current);
+    }
+  }, [initialPhase]);
 
   async function finalizeAndRead(transactionHash: TransactionHash, caseId: number) {
     if (!contractApi) throw new Error("Contract client is not available");

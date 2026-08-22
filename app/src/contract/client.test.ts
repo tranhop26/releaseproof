@@ -42,4 +42,26 @@ describe("ReleaseProof contract client", () => {
       value: 0n,
     });
   });
+
+  it("normalizes finalized GLSim receipts before UI reconciliation", async () => {
+    const client = {
+      writeContract: vi.fn(),
+      readContract: vi.fn(),
+      waitForTransactionReceipt: vi.fn().mockResolvedValue({
+        status: 7,
+        status_name: "FINALIZED",
+        consensus_data: {
+          leader_receipt: [
+            { execution_result: "SUCCESS", result: { status: "return" } },
+          ],
+        },
+      }),
+    };
+    const api = createReleaseProofApi(client, address);
+
+    await expect(api.waitForReceipt(hash)).resolves.toMatchObject({
+      statusName: "FINALIZED",
+      txExecutionResultName: "FINISHED_WITH_RETURN",
+    });
+  });
 });
