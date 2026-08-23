@@ -32,13 +32,14 @@ export function configuredEndpoint(): string | undefined {
   return requireRpcEndpoint(import.meta.env.VITE_GENLAYER_RPC_URL);
 }
 
-export function configuredChain() {
+export function configuredNetworkName(): "localnet" | "studionet" {
   const network = import.meta.env.VITE_GENLAYER_NETWORK ?? "studionet";
-  if (network === "localnet") {
-    return localnet;
-  }
-  if (network !== "studionet") {
+  if (network !== "localnet" && network !== "studionet") {
     throw new Error(`Unsupported GenLayer network: ${network}`);
   }
-  return studionet;
+  return network;
+}
+
+export function configuredChain() {
+  return configuredNetworkName() === "localnet" ? localnet : studionet;
 }

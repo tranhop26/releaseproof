@@ -99,6 +99,16 @@ test.beforeEach(async ({ page }) => {
       return [account.address];
     }
     if (args.method === "eth_chainId") return "0xeec7";
+    if (args.method === "wallet_getSnaps") {
+      return {
+        "npm:genlayer-wallet-plugin": {
+          blocked: false,
+          enabled: true,
+          id: "npm:genlayer-wallet-plugin",
+          version: "1.0.0",
+        },
+      };
+    }
     if (args.method === "eth_sendTransaction") {
       const transaction = args.params?.[0];
       if (!transaction?.to || !transaction.data) throw new Error("Invalid wallet transaction");

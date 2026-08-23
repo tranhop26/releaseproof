@@ -33,6 +33,10 @@ export interface ContractClientLike {
   }): Promise<unknown>;
 }
 
+export interface WalletContractClientLike extends ContractClientLike {
+  connect(network: "localnet" | "studionet"): Promise<void>;
+}
+
 function requireHash(value: unknown): TransactionHash {
   if (typeof value !== "string" || !/^0x[0-9a-fA-F]+$/.test(value)) {
     throw new Error("Contract write did not return a transaction hash");
@@ -71,7 +75,7 @@ export function createReadClient(): ContractClientLike {
 export function createWalletClient(
   address: string,
   provider: WalletProvider,
-): ContractClientLike {
+): WalletContractClientLike {
   if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
     throw new Error("Wallet address is invalid");
   }
@@ -80,7 +84,7 @@ export function createWalletClient(
     endpoint: configuredEndpoint(),
     account: address as ContractAddress,
     provider: provider as never,
-  }) as ContractClientLike;
+  }) as WalletContractClientLike;
 }
 
 export function createReleaseProofApi(

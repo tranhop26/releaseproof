@@ -7,7 +7,7 @@ import {
   type ReleaseProofApi,
   type WalletProvider,
 } from "./contract/client";
-import { configuredContractAddress } from "./contract/config";
+import { configuredContractAddress, configuredNetworkName } from "./contract/config";
 import { CaseWorkspace } from "./features/cases/CaseWorkspace";
 
 
@@ -45,6 +45,7 @@ export default function App() {
         throw new Error("Wallet did not return an account");
       }
       const client = createWalletClient(accounts[0], window.ethereum);
+      await client.connect(configuredNetworkName());
       setWalletAddress(accounts[0]);
       setWalletApi(createReleaseProofApi(client, configuredContractAddress()));
     } catch (caught) {
