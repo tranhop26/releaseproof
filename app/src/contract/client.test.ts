@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { TransactionStatus } from "genlayer-js/types";
 
 import { createReleaseProofApi } from "./client";
 
@@ -62,6 +63,10 @@ describe("ReleaseProof contract client", () => {
     await expect(api.waitForReceipt(hash)).resolves.toMatchObject({
       statusName: "FINALIZED",
       txExecutionResultName: "FINISHED_WITH_RETURN",
+    });
+    expect(client.waitForTransactionReceipt).toHaveBeenCalledWith({
+      hash,
+      status: TransactionStatus.FINALIZED,
     });
   });
 });

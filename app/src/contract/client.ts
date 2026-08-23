@@ -1,4 +1,5 @@
 import { createClient as createGenLayerClient } from "genlayer-js";
+import { TransactionStatus } from "genlayer-js/types";
 
 import { configuredChain, configuredEndpoint, requireContractAddress } from "./config";
 import {
@@ -29,7 +30,7 @@ export interface ContractClientLike {
   }): Promise<unknown>;
   waitForTransactionReceipt(args: {
     hash: TransactionHash;
-    waitUntil: "finalized";
+    status: TransactionStatus;
   }): Promise<unknown>;
 }
 
@@ -152,7 +153,10 @@ export function createReleaseProofApi(
 
     async waitForReceipt(hash: TransactionHash) {
       return normalizeReceipt(
-        await client.waitForTransactionReceipt({ hash, waitUntil: "finalized" }),
+        await client.waitForTransactionReceipt({
+          hash,
+          status: TransactionStatus.FINALIZED,
+        }),
       );
     },
   };
