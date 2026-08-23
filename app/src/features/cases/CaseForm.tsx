@@ -20,7 +20,12 @@ function validate(value: SubmissionInput): FieldErrors {
   if (!/^[0-9a-fA-F]{40}$/.test(value.commitSha.trim())) {
     errors.commitSha = "Enter an exact 40-character commit SHA";
   }
-  if (!/^[A-Za-z0-9][A-Za-z0-9._/-]*\.md$/.test(value.artifactPath.trim())) {
+  const artifactPath = value.artifactPath.trim();
+  if (
+    !/^[A-Za-z0-9][A-Za-z0-9._/-]{0,239}\.md$/.test(artifactPath)
+    || artifactPath.includes("//")
+    || artifactPath.split("/").some((segment) => segment === "." || segment === "..")
+  ) {
     errors.artifactPath = "Enter a safe Markdown path ending in .md";
   }
   if (!/^[0-9a-fA-F]{64}$/.test(value.evidenceHash.trim())) {

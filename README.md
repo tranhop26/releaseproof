@@ -74,10 +74,11 @@ as `VITE_GENLAYER_CONTRACT_ADDRESS` before building the frontend. In the app,
 connect an injected wallet, submit `owner/repository`, a 40-character commit, a
 Markdown path, and the raw file SHA-256; then resolve or read the case by ID.
 
-Studionet deployment: [`0x10aE8E49717D9E90398F9E783bf6db7d25Be1A69`](https://explorer-studio.genlayer.com/address/0x10aE8E49717D9E90398F9E783bf6db7d25Be1A69),
-created by [transaction `0xf4cc77…48ae16`](https://explorer-studio.genlayer.com/tx/0xf4cc77fc4503233dcb7be2b5655fb1e253deb3d08e3fb2b47e3289060948ae16).
+Studionet deployment: [`0x946BC9B19BD971CBefb56845b5825FB7B9f6b183`](https://explorer-studio.genlayer.com/address/0x946BC9B19BD971CBefb56845b5825FB7B9f6b183),
+created by [transaction `0x5e449a…5a17f8`](https://explorer-studio.genlayer.com/tx/0x5e449a2d3ae62c7b6f0df9aa884014c5a5fcf48e94d8f6745a29f2f9495a17f8).
 The finalized deployment metadata and on-chain source hash are recorded in
-`deployments/studionet.json`.
+`deployments/studionet.json`. The frozen predecessor remains linked in
+`deployments/studionet-predecessor.json` as read-only history.
 
 The live actor/action/transaction/readback table is recorded in `docs/evidence.md`
 after the production exercise. Current limitations: public

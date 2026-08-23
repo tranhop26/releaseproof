@@ -45,4 +45,29 @@ describe("wallet network connection", () => {
       expect(screen.getByRole("button", { name: "0x21b4…2eC7" })).toBeVisible();
     });
   });
+
+  it("invalidates the connected wallet when its account changes", async () => {
+    const listeners = new Map<string, (...args: unknown[]) => void>();
+    window.ethereum = {
+      request: vi.fn().mockResolvedValue([
+        "0x21b45103dd05c43969daF3CbB4277391777e2eC7",
+      ]),
+      on: vi.fn((event, listener) => listeners.set(event, listener)),
+      removeListener: vi.fn(),
+    };
+    vi.mocked(createWalletClient).mockReturnValue({
+      connect: vi.fn().mockResolvedValue(undefined),
+    } as never);
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Connect wallet" }));
+    await screen.findByRole("button", { name: "0x21b4…2eC7" });
+
+    listeners.get("accountsChanged")?.(["0x1111111111111111111111111111111111111111"]);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Connect wallet" })).toBeVisible();
+      expect(screen.getByText(/wallet changed/i)).toBeVisible();
+      expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
+    });
+  });
 });

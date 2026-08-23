@@ -50,7 +50,7 @@ Each case stores:
 - observation time: validator fetch time reported in the decision explanation;
 - submission time: GenLayer transaction time stored by the contract;
 - freshness: the commit itself is immutable; resolution must occur within 30 days of submission so source availability is not treated as indefinitely fresh;
-- replay domain: chain ID + contract address + case ID + repository + commit SHA + artifact path + policy version;
+- replay domain: schema version + policy version + normalized repository + commit SHA + canonical artifact path + evidence digest; deployment manifests identify the separate chain and contract domain;
 - integrity: contract-derived canonical URL and a stored deterministic binding string/hash supplied at creation and rechecked before resolution.
 
 The contract never accepts an arbitrary fetch URL. Missing, oversized, non-text, inaccessible, redirected outside approved GitHub hosts, commit-mismatched, or ambiguous evidence resolves safely to `UNRESOLVED` or rejects before consensus, depending on whether the defect is structural or environmental.

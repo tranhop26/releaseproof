@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CaseReadback } from "./CaseReadback";
 import { CaseWorkspace, type WorkspacePhase } from "./CaseWorkspace";
@@ -11,10 +11,12 @@ const expectedLabels: Array<[WorkspacePhase, string]> = [
   ["signing", "Confirm in wallet"],
   ["pending", "Consensus in progress"],
   ["finalized", "Transaction finalized"],
+  ["success", "Execution succeeded"],
   ["execution_error", "Execution failed"],
 ];
 
 describe("CaseWorkspace", () => {
+  beforeEach(() => sessionStorage.clear());
   it.each(expectedLabels)("renders %s distinctly", (phase, label) => {
     render(<CaseWorkspace initialPhase={phase} />);
     expect(screen.getByText(label)).toBeVisible();
@@ -97,7 +99,84 @@ describe("CaseWorkspace", () => {
 
     expect(await screen.findByText("Submitted for review")).toBeVisible();
     expect(screen.getByText("Authoritative contract readback")).toBeVisible();
+    const milestones = screen.getByLabelText("Transaction milestones");
+    expect(milestones).toHaveTextContent("PendingFinalizedExecution successReadback");
     expect(api.submitCase).toHaveBeenCalledTimes(1);
+  });
+
+  it("restores a pending submission after refresh without resubmitting", async () => {
+    const submitted: CaseRecord = {
+      case_id: 1,
+      submitter: `0x${"1".repeat(40)}`,
+      repository: "openscience/trial-a",
+      commit_sha: "a".repeat(40),
+      artifact_path: "reports/reproduction.md",
+      evidence_hash: "b".repeat(64),
+      binding: "releaseproof-case-v1|reproducibility-v1|openscience/trial-a|binding",
+      schema_version: "releaseproof-case-v1",
+      policy_version: "reproducibility-v1",
+      submitted_at: "2026-01-01T00:00:00Z",
+      state: "SUBMITTED",
+      outcome: "",
+      reason: "",
+      criteria: { question: false, procedure: false, results: false, limitations: false },
+      resolver: "",
+      resolved_at: "",
+      canonical_url: "https://raw.githubusercontent.com/openscience/trial-a/a/report.md",
+    };
+    sessionStorage.setItem("releaseproof:pendingTransaction", JSON.stringify({
+      version: 1,
+      kind: "submit",
+      hash: `0x${"f".repeat(64)}`,
+      binding: submitted.binding,
+    }));
+    const api = {
+      submitCase: vi.fn(),
+      resolveCase: vi.fn(),
+      readCase: vi.fn().mockResolvedValue(submitted),
+      getCaseIdByBinding: vi.fn().mockResolvedValue(1),
+      waitForReceipt: vi.fn().mockResolvedValue({
+        statusName: "FINALIZED",
+        txExecutionResultName: "FINISHED_WITH_RETURN",
+      }),
+    };
+
+    render(<CaseWorkspace
+      initialPhase="disconnected"
+      readApi={api}
+      walletConnected={false}
+    />);
+
+    expect(await screen.findByText("Authoritative contract readback")).toBeVisible();
+    expect(api.submitCase).not.toHaveBeenCalled();
+    expect(api.getCaseIdByBinding).toHaveBeenCalledWith(submitted.binding);
+    expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Ask validators to resolve" })).not.toBeInTheDocument();
+    expect(sessionStorage.getItem("releaseproof:pendingTransaction")).toBeNull();
+  });
+
+  it("keeps pending metadata and shows a recoverable error when resume fails", async () => {
+    const pending = {
+      version: 1,
+      kind: "resolve",
+      hash: `0x${"e".repeat(64)}`,
+      caseId: 3,
+    };
+    sessionStorage.setItem("releaseproof:pendingTransaction", JSON.stringify(pending));
+    const api = {
+      submitCase: vi.fn(),
+      resolveCase: vi.fn(),
+      readCase: vi.fn(),
+      getCaseIdByBinding: vi.fn(),
+      waitForReceipt: vi.fn().mockRejectedValue(new Error("RPC unavailable")),
+    };
+    render(<CaseWorkspace initialPhase="idle" contractApi={api} />);
+
+    expect(await screen.findByText("RPC unavailable")).toBeVisible();
+    expect(sessionStorage.getItem("releaseproof:pendingTransaction")).not.toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Resume transaction" }));
+    expect(await screen.findByText("RPC unavailable")).toBeVisible();
+    expect(sessionStorage.getItem("releaseproof:pendingTransaction")).not.toBeNull();
   });
 });
 

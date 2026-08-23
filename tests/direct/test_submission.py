@@ -57,6 +57,13 @@ def test_submit_stores_immutable_binding(direct_vm, direct_deploy):
         (
             "owner/repo",
             VALID_SHA,
+            "reports/./report.md",
+            VALID_DIGEST,
+            "Invalid artifact path",
+        ),
+        (
+            "owner/repo",
+            VALID_SHA,
             "report.md",
             "bad",
             "Invalid evidence hash",

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   createReadClient,
@@ -32,6 +32,25 @@ export default function App() {
       return undefined;
     }
   }, []);
+  const networkName = configuredNetworkName();
+
+  useEffect(() => {
+    const provider = window.ethereum;
+    if (!provider?.on) return;
+    const invalidateWallet = () => {
+      setWalletAddress("");
+      setWalletApi(undefined);
+      setWalletError("Wallet changed. Reconnect to continue safely.");
+    };
+    provider.on("accountsChanged", invalidateWallet);
+    provider.on("chainChanged", invalidateWallet);
+    provider.on("disconnect", invalidateWallet);
+    return () => {
+      provider.removeListener?.("accountsChanged", invalidateWallet);
+      provider.removeListener?.("chainChanged", invalidateWallet);
+      provider.removeListener?.("disconnect", invalidateWallet);
+    };
+  }, []);
 
   async function connectWallet() {
     if (!window.ethereum) {
@@ -45,7 +64,7 @@ export default function App() {
         throw new Error("Wallet did not return an account");
       }
       const client = createWalletClient(accounts[0], window.ethereum);
-      await client.connect(configuredNetworkName());
+      await client.connect(networkName);
       setWalletAddress(accounts[0]);
       setWalletApi(createReleaseProofApi(client, configuredContractAddress()));
     } catch (caught) {
@@ -66,7 +85,7 @@ export default function App() {
         </nav>
         <div className="sidebar-note">
           <span className="network-dot" />
-          <div><strong>Studionet</strong><small>Intentionally frozen</small></div>
+          <div><strong>{networkName === "studionet" ? "Studionet" : "Localnet"}</strong><small>Intentionally frozen</small></div>
         </div>
       </aside>
 
@@ -82,7 +101,9 @@ export default function App() {
         <main id="workspace">
           <CaseWorkspace
             initialPhase={walletAddress ? "idle" : "disconnected"}
-            contractApi={walletApi ?? readApi}
+            readApi={readApi}
+            walletConnected={Boolean(walletAddress && walletApi)}
+            writeApi={walletApi}
           />
           <section className="policy-section" id="policy" aria-labelledby="policy-title">
             <div><p className="eyebrow">Reproducibility Policy v1</p><h2 id="policy-title">What validators establish</h2></div>

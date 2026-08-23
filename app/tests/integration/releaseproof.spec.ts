@@ -162,6 +162,35 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
   await expect(page.getByText("Authoritative contract readback")).toBeVisible();
   await expect(page.getByText("#1")).toBeVisible();
 
+  const firstHash = await page.locator(".timeline-hash").textContent();
+  expect(firstHash).toMatch(/^0x[0-9a-f]+$/i);
+  await page.evaluate(({ hash, binding }) => {
+    sessionStorage.setItem("releaseproof:pendingTransaction", JSON.stringify({
+      version: 1,
+      kind: "submit",
+      hash,
+      binding,
+    }));
+  }, {
+    hash: firstHash,
+    binding: [
+      "releaseproof-case-v1",
+      "reproducibility-v1",
+      "carbofozzz/questera",
+      "52d0e41bbc351bd69bf270bec0143eba40413dcc",
+      "README.md",
+      "476efb7e033fab131ac56330423c2d457bfa0d3f8340624aa3f4114a888e197b",
+    ].join("|"),
+  });
+  await page.reload();
+  await expect(page.getByText("Authoritative contract readback")).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText("#1")).toBeVisible();
+  await page.getByRole("button", { name: "Connect wallet" }).click();
+
+  await page.getByLabel("GitHub repository").fill("carbofozzz/questera");
+  await page.getByLabel("Commit SHA").fill("52d0e41bbc351bd69bf270bec0143eba40413dcc");
+  await page.getByLabel("Markdown path").fill("README.md");
+  await page.getByLabel("Evidence SHA-256").fill("476efb7e033fab131ac56330423c2d457bfa0d3f8340624aa3f4114a888e197b");
   await page.getByRole("button", { name: "Submit evidence" }).click();
   await expect(page.getByText("Execution failed")).toBeVisible({ timeout: 45_000 });
   expect(consoleErrors).toEqual([]);

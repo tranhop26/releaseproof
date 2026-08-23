@@ -20,7 +20,11 @@ const phaseCopy: Record<WorkspacePhase, { title: string; detail: string }> = {
   },
   finalized: {
     title: "Transaction finalized",
-    detail: "Execution succeeded. Reading authoritative contract state.",
+    detail: "Consensus is final. Checking the contract execution result.",
+  },
+  success: {
+    title: "Execution succeeded",
+    detail: "The contract call returned successfully. Reading authoritative state.",
   },
   readback: {
     title: "Contract state synchronized",
@@ -36,7 +40,23 @@ const phaseCopy: Record<WorkspacePhase, { title: string; detail: string }> = {
   },
 };
 
-export function TransactionTimeline({ phase, hash }: { phase: WorkspacePhase; hash?: string }) {
+const milestoneCopy: Partial<Record<WorkspacePhase, string>> = {
+  pending: "Pending",
+  finalized: "Finalized",
+  success: "Execution success",
+  readback: "Readback",
+  execution_error: "Execution error",
+};
+
+export function TransactionTimeline({
+  phase,
+  hash,
+  milestones = [],
+}: {
+  phase: WorkspacePhase;
+  hash?: string;
+  milestones?: WorkspacePhase[];
+}) {
   const active = phaseCopy[phase];
   return (
     <section className={`timeline phase-${phase}`} aria-live="polite">
@@ -45,6 +65,13 @@ export function TransactionTimeline({ phase, hash }: { phase: WorkspacePhase; ha
         <p className="timeline-title">{active.title}</p>
         <p className="timeline-detail">{active.detail}</p>
         {hash && <p className="mono timeline-hash">{hash}</p>}
+        {milestones.length > 0 && (
+          <ol aria-label="Transaction milestones" className="transaction-milestones">
+            {milestones.map((milestone, index) => (
+              <li key={`${milestone}-${index}`}>{milestoneCopy[milestone] ?? milestone}</li>
+            ))}
+          </ol>
+        )}
       </div>
     </section>
   );

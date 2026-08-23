@@ -41,7 +41,12 @@ export type CaseRecord = z.infer<typeof caseRecordSchema>;
 export const submissionInputSchema = z.object({
   repository: z.string().min(3),
   commitSha: z.string().regex(/^[0-9a-fA-F]{40}$/),
-  artifactPath: z.string().endsWith(".md"),
+  artifactPath: z
+    .string()
+    .regex(/^[A-Za-z0-9][A-Za-z0-9._/-]{0,239}\.md$/)
+    .refine((path) => !path.includes("//") && !path.split("/").some(
+      (segment) => segment === "." || segment === "..",
+    ), "Artifact path is ambiguous"),
   evidenceHash: z.string().regex(/^[0-9a-fA-F]{64}$/),
 });
 

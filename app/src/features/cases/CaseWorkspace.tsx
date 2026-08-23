@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { ReleaseProofApi } from "../../contract/client";
 import type { CaseRecord, SubmissionInput, TransactionHash } from "../../contract/types";
@@ -13,9 +13,43 @@ export type WorkspacePhase =
   | "signing"
   | "pending"
   | "finalized"
+  | "success"
   | "readback"
   | "execution_error"
   | "error";
+
+const PENDING_KEY = "releaseproof:pendingTransaction";
+
+type PendingTransaction = {
+  version: 1;
+  kind: "submit" | "resolve";
+  hash: TransactionHash;
+  binding?: string;
+  caseId?: number;
+};
+
+function loadPending(): PendingTransaction | undefined {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY);
+    if (!raw) return undefined;
+    const value = JSON.parse(raw) as Partial<PendingTransaction>;
+    if (
+      value.version !== 1
+      || (value.kind !== "submit" && value.kind !== "resolve")
+      || typeof value.hash !== "string"
+      || !/^0x[0-9a-fA-F]+$/.test(value.hash)
+    ) return undefined;
+    if (value.kind === "submit" && typeof value.binding !== "string") return undefined;
+    if (value.kind === "resolve" && (!Number.isSafeInteger(value.caseId) || Number(value.caseId) < 1)) return undefined;
+    return value as PendingTransaction;
+  } catch {
+    return undefined;
+  }
+}
+
+function savePending(value: PendingTransaction) {
+  sessionStorage.setItem(PENDING_KEY, JSON.stringify(value));
+}
 
 function bindingFor(input: SubmissionInput) {
   return [
@@ -31,44 +65,86 @@ function bindingFor(input: SubmissionInput) {
 export function CaseWorkspace({
   initialPhase = "disconnected",
   contractApi,
+  readApi,
+  walletConnected,
+  writeApi,
 }: {
   initialPhase?: WorkspacePhase;
   contractApi?: ReleaseProofApi;
+  readApi?: ReleaseProofApi;
+  walletConnected?: boolean;
+  writeApi?: ReleaseProofApi;
 }) {
   const [phase, setPhase] = useState<WorkspacePhase>(initialPhase);
   const [hash, setHash] = useState<TransactionHash>();
   const [readback, setReadback] = useState<CaseRecord>();
   const [lookupId, setLookupId] = useState("");
   const [error, setError] = useState("");
-  const connected = phase !== "disconnected";
-  const busy = ["signing", "pending", "finalized"].includes(phase);
+  const [pendingTransaction, setPendingTransaction] = useState<PendingTransaction>();
+  const [milestones, setMilestones] = useState<WorkspacePhase[]>([]);
+  const restoredHash = useRef("");
+  const connected = walletConnected ?? initialPhase !== "disconnected";
+  const activeReadApi = readApi ?? contractApi ?? writeApi;
+  const activeWriteApi = writeApi ?? (connected ? contractApi : undefined);
+  const busy = ["signing", "pending", "finalized", "success"].includes(phase);
 
   useEffect(() => {
     if (initialPhase === "idle") {
       setPhase((current) => current === "disconnected" ? "idle" : current);
+    } else {
+      setPhase((current) => current === "idle" ? "disconnected" : current);
     }
   }, [initialPhase]);
 
-  async function finalizeAndRead(transactionHash: TransactionHash, caseId: number) {
-    if (!contractApi) throw new Error("Contract client is not available");
+  async function reconcilePending(pending: PendingTransaction) {
+    if (!activeReadApi) throw new Error("Contract read client is not available");
+    setError("");
+    setPendingTransaction(pending);
+    setHash(pending.hash);
+    setMilestones(["pending"]);
     setPhase("pending");
-    const receipt = (await contractApi.waitForReceipt(transactionHash)) as {
+    const receipt = (await activeReadApi.waitForReceipt(pending.hash)) as {
       statusName?: string;
       txExecutionResultName?: string;
     };
-    if (receipt.statusName !== "FINALIZED") return;
-    if (receipt.txExecutionResultName !== "FINISHED_WITH_RETURN") {
-      setPhase("execution_error");
+    if (receipt.statusName !== "FINALIZED") {
+      setError("Transaction is not finalized yet. Resume reconciliation to check again.");
       return;
     }
     setPhase("finalized");
-    const value = await contractApi.readCase(caseId);
+    setMilestones((current) => [...current, "finalized"]);
+    if (receipt.txExecutionResultName !== "FINISHED_WITH_RETURN") {
+      setPhase("execution_error");
+      setMilestones((current) => [...current, "execution_error"]);
+      return;
+    }
+    setPhase("success");
+    setMilestones((current) => [...current, "success"]);
+    const caseId = pending.kind === "submit"
+      ? await activeReadApi.getCaseIdByBinding(pending.binding ?? "")
+      : pending.caseId ?? 0;
+    if (caseId < 1) throw new Error("Finalized transaction has no contract case ID");
+    const value = await activeReadApi.readCase(caseId);
     setReadback(value);
     setPhase("readback");
+    setMilestones((current) => [...current, "readback"]);
+    sessionStorage.removeItem(PENDING_KEY);
+    setPendingTransaction(undefined);
   }
 
+  useEffect(() => {
+    if (!activeReadApi) return;
+    const pending = loadPending();
+    if (!pending || restoredHash.current === pending.hash) return;
+    restoredHash.current = pending.hash;
+    void reconcilePending(pending).catch((caught: unknown) => {
+      setError(caught instanceof Error ? caught.message : "Transaction reconciliation failed");
+      setPhase("error");
+    });
+  }, [activeReadApi]);
+
   async function submit(input: SubmissionInput) {
-    if (!contractApi) {
+    if (!activeWriteApi) {
       setError("Contract address or wallet client is not configured.");
       setPhase("error");
       return;
@@ -76,25 +152,15 @@ export function CaseWorkspace({
     try {
       setError("");
       setPhase("signing");
-      const transactionHash = await contractApi.submitCase(input);
-      setHash(transactionHash);
-      sessionStorage.setItem("releaseproof:lastTransaction", transactionHash);
-      setPhase("pending");
-      const receipt = (await contractApi.waitForReceipt(transactionHash)) as {
-        statusName?: string;
-        txExecutionResultName?: string;
+      const transactionHash = await activeWriteApi.submitCase(input);
+      const pending: PendingTransaction = {
+        version: 1,
+        kind: "submit",
+        hash: transactionHash,
+        binding: bindingFor(input),
       };
-      if (receipt.statusName !== "FINALIZED") return;
-      if (receipt.txExecutionResultName !== "FINISHED_WITH_RETURN") {
-        setPhase("execution_error");
-        return;
-      }
-      setPhase("finalized");
-      const caseId = await contractApi.getCaseIdByBinding(bindingFor(input));
-      if (caseId < 1) throw new Error("Finalized submission has no contract case ID");
-      const value = await contractApi.readCase(caseId);
-      setReadback(value);
-      setPhase("readback");
+      savePending(pending);
+      await reconcilePending(pending);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "The request failed");
       setPhase("error");
@@ -104,14 +170,14 @@ export function CaseWorkspace({
   async function lookup(event: FormEvent) {
     event.preventDefault();
     const caseId = Number(lookupId);
-    if (!contractApi || !Number.isSafeInteger(caseId) || caseId < 1) {
+    if (!activeReadApi || !Number.isSafeInteger(caseId) || caseId < 1) {
       setError("Enter a valid case ID and configure the contract.");
       setPhase("error");
       return;
     }
     try {
       setError("");
-      const value = await contractApi.readCase(caseId);
+      const value = await activeReadApi.readCase(caseId);
       setReadback(value);
       setPhase("readback");
     } catch (caught) {
@@ -121,14 +187,19 @@ export function CaseWorkspace({
   }
 
   async function resolve() {
-    if (!contractApi || !readback) return;
+    if (!activeWriteApi || !readback) return;
     try {
       setError("");
       setPhase("signing");
-      const transactionHash = await contractApi.resolveCase(readback.case_id);
-      setHash(transactionHash);
-      sessionStorage.setItem("releaseproof:lastTransaction", transactionHash);
-      await finalizeAndRead(transactionHash, readback.case_id);
+      const transactionHash = await activeWriteApi.resolveCase(readback.case_id);
+      const pending: PendingTransaction = {
+        version: 1,
+        kind: "resolve",
+        hash: transactionHash,
+        caseId: readback.case_id,
+      };
+      savePending(pending);
+      await reconcilePending(pending);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Resolution failed");
       setPhase("error");
@@ -165,8 +236,26 @@ export function CaseWorkspace({
         </section>
 
         <aside className="activity-column" aria-label="Transaction status and lookup">
-          <TransactionTimeline phase={phase} hash={hash} />
+          <TransactionTimeline phase={phase} hash={hash} milestones={milestones} />
           {error && <div className="error-banner" role="alert">{error}</div>}
+          {pendingTransaction && ["pending", "execution_error", "error"].includes(phase) && (
+            <div className="transaction-actions">
+              <button onClick={() => {
+                void reconcilePending(pendingTransaction).catch((caught: unknown) => {
+                  setError(caught instanceof Error ? caught.message : "Transaction reconciliation failed");
+                  setPhase("error");
+                });
+              }} type="button">Resume transaction</button>
+              <button onClick={() => {
+                sessionStorage.removeItem(PENDING_KEY);
+                setPendingTransaction(undefined);
+                setHash(undefined);
+                setMilestones([]);
+                setError("");
+                setPhase(connected ? "idle" : "disconnected");
+              }} type="button">Dismiss transaction</button>
+            </div>
+          )}
           <form className="lookup-panel" onSubmit={lookup}>
             <div><p className="eyebrow">Read registry</p><h2>Look up a case</h2></div>
             <label className="lookup-field">

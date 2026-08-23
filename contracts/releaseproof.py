@@ -75,7 +75,10 @@ class ReleaseProof(gl.Contract):
             raise ValueError("Invalid commit SHA")
         if (
             _PATH_RE.fullmatch(artifact_normalized) is None
-            or ".." in artifact_normalized.split("/")
+            or any(
+                segment in (".", "..")
+                for segment in artifact_normalized.split("/")
+            )
             or "//" in artifact_normalized
         ):
             raise ValueError("Invalid artifact path")
