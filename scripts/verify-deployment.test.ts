@@ -17,8 +17,13 @@ async function withManifestFixtures(
   const directory = await mkdtemp(join(tmpdir(), "releaseproof-manifest-"));
   const currentPath = join(directory, "studionet.json");
   const historicalPath = join(directory, "studionet-v1.json");
-  const current = JSON.parse(await readFile(resolve("deployments/studionet.json"), "utf8")) as ManifestFixture;
-  const historical = JSON.parse(await readFile(resolve("deployments/studionet-v1.json"), "utf8")) as ManifestFixture;
+  const baseline = JSON.parse(
+    await readFile(resolve("deployments/studionet-v1.json"), "utf8"),
+  ) as ManifestFixture;
+  const current = structuredClone(baseline);
+  const historical = structuredClone(baseline);
+  current.successor = null;
+  historical.successor = null;
   mutate(current, historical);
   await writeFile(currentPath, `${JSON.stringify(current)}\n`, "utf8");
   await writeFile(historicalPath, `${JSON.stringify(historical)}\n`, "utf8");
