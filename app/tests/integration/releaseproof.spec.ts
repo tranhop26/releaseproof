@@ -131,7 +131,8 @@ test.beforeEach(async ({ page }) => {
     Object.defineProperty(window, "ethereum", {
       configurable: true,
       value: {
-        request: (args: { method: string; params?: Array<Record<string, string>> }) =>
+        isMetaMask: true,
+        request: (args: { method: string; params?: unknown }) =>
           (window as unknown as {
             releaseProofWalletRequest(value: typeof args): Promise<unknown>;
           }).releaseProofWalletRequest(args),
@@ -149,7 +150,7 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
   });
   await page.goto("/");
   await expect(page.getByText("Connect wallet to submit")).toBeVisible();
-  await page.getByRole("button", { name: "Connect wallet" }).click();
+  await page.getByRole("button", { name: "Connect MetaMask" }).click();
   await expect(page.getByRole("button", { name: /0x.*…/ })).toBeVisible();
 
   await page.getByLabel("GitHub repository").fill("carbofozzz/questera");
@@ -185,7 +186,7 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
   await page.reload();
   await expect(page.getByText("Authoritative contract readback")).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText("#1")).toBeVisible();
-  await page.getByRole("button", { name: "Connect wallet" }).click();
+  await page.getByRole("button", { name: "Connect MetaMask" }).click();
 
   await page.getByLabel("GitHub repository").fill("carbofozzz/questera");
   await page.getByLabel("Commit SHA").fill("52d0e41bbc351bd69bf270bec0143eba40413dcc");
@@ -204,5 +205,5 @@ test("mobile layout has no horizontal overflow", async ({ page }, testInfo) => {
     scrollWidth: document.documentElement.scrollWidth,
   }));
   expect(dimensions.scrollWidth).toBe(dimensions.clientWidth);
-  await expect(page.getByRole("button", { name: "Connect wallet" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect MetaMask" })).toBeVisible();
 });

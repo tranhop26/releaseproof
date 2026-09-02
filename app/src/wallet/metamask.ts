@@ -127,7 +127,10 @@ export async function connectMetaMask(
   try {
     accounts = await provider.request({ method: "eth_requestAccounts" });
   } catch (error) {
-    throw new Error(`MetaMask account access failed: ${walletErrorMessage(error)}`);
+    throw new Error(
+      `MetaMask account access failed: ${walletErrorMessage(error)}`,
+      { cause: error },
+    );
   }
   if (
     !Array.isArray(accounts)
@@ -140,12 +143,18 @@ export async function connectMetaMask(
   try {
     await ensureNetwork(provider, chain);
   } catch (error) {
-    throw new Error(`MetaMask network setup failed: ${walletErrorMessage(error)}`);
+    throw new Error(
+      `MetaMask network setup failed: ${walletErrorMessage(error)}`,
+      { cause: error },
+    );
   }
   try {
     await ensureSnap(provider);
   } catch (error) {
-    throw new Error(`GenLayer Snap setup failed: ${walletErrorMessage(error)}`);
+    throw new Error(
+      `GenLayer Snap setup failed: ${walletErrorMessage(error)}`,
+      { cause: error },
+    );
   }
   return { address: accounts[0], provider };
 }
