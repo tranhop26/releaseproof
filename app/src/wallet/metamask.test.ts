@@ -47,13 +47,23 @@ describe("selectMetaMaskProvider", () => {
 
 describe("connectMetaMask", () => {
   it("switches an existing network without trying to add it", async () => {
-    const metamask = provider({
-      eth_requestAccounts: [address],
-      eth_chainId: "0x1",
-      wallet_switchEthereumChain: null,
-      wallet_getSnaps: { [snapId]: { id: snapId, enabled: true, blocked: false } },
-      eth_accounts: [address],
-    });
+    let chainReads = 0;
+    const metamask: MetaMaskProvider = {
+      isMetaMask: true,
+      request: vi.fn(async ({ method }) => {
+        if (method === "eth_requestAccounts" || method === "eth_accounts") {
+          return [address];
+        }
+        if (method === "eth_chainId") {
+          return chainReads++ === 0 ? "0x1" : "0xf22f";
+        }
+        if (method === "wallet_switchEthereumChain") return null;
+        if (method === "wallet_getSnaps") {
+          return { [snapId]: { id: snapId, enabled: true, blocked: false } };
+        }
+        throw new Error(`Unexpected wallet method: ${method}`);
+      }),
+    };
 
     await expect(connectMetaMask(metamask, studionet)).resolves.toEqual({
       address,
@@ -70,11 +80,14 @@ describe("connectMetaMask", () => {
 
   it("adds an unknown network and retries the switch", async () => {
     let switchCalls = 0;
+    let chainReads = 0;
     const metamask: MetaMaskProvider = {
       isMetaMask: true,
       request: vi.fn(async ({ method }) => {
         if (method === "eth_requestAccounts") return [address];
-        if (method === "eth_chainId") return "0x1";
+        if (method === "eth_chainId") {
+          return chainReads++ === 0 ? "0x1" : "0xf22f";
+        }
         if (method === "wallet_switchEthereumChain") {
           if (switchCalls++ === 0) {
             throw { code: 4902, message: "Unknown chain" };
@@ -183,6 +196,28 @@ describe("connectMetaMask", () => {
 
     await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
       "MetaMask account changed during connection",
+    );
+  });
+
+  it("rejects a network that changes while Snap approval is open", async () => {
+    let chainReads = 0;
+    const metamask: MetaMaskProvider = {
+      isMetaMask: true,
+      request: vi.fn(async ({ method }) => {
+        if (method === "eth_requestAccounts") return [address];
+        if (method === "eth_chainId") {
+          return chainReads++ === 0 ? "0xf22f" : "0x1";
+        }
+        if (method === "wallet_getSnaps") {
+          return { [snapId]: { id: snapId, enabled: true, blocked: false } };
+        }
+        if (method === "eth_accounts") return [address];
+        throw new Error(`Unexpected wallet method: ${method}`);
+      }),
+    };
+
+    await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
+      "MetaMask network changed during connection",
     );
   });
 

@@ -165,6 +165,16 @@ export async function connectMetaMask(
       { cause: error },
     );
   }
+  const expectedChainId = `0x${chain.id.toString(16)}`;
+  const currentChainId = await provider.request({ method: "eth_chainId" });
+  if (
+    typeof currentChainId !== "string"
+    || currentChainId.toLowerCase() !== expectedChainId
+  ) {
+    throw new Error(
+      "MetaMask network changed during connection. Reconnect to continue safely.",
+    );
+  }
   const currentAccounts = await provider.request({ method: "eth_accounts" });
   if (
     !Array.isArray(currentAccounts)

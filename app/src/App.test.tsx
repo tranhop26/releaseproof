@@ -92,6 +92,25 @@ describe("MetaMask connection", () => {
     expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
   });
 
+  it("ignores a pending connection result after unmount", async () => {
+    let finish!: (value: ConnectedMetaMask) => void;
+    const preparation = new Promise<ConnectedMetaMask>((resolve) => {
+      finish = resolve;
+    });
+    vi.mocked(connectMetaMask).mockReturnValue(preparation);
+
+    const view = render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Connect MetaMask" }));
+    view.unmount();
+
+    await act(async () => {
+      finish({ address, provider: window.ethereum! });
+      await preparation;
+    });
+
+    expect(createWalletClient).not.toHaveBeenCalled();
+  });
+
   it("invalidates the wallet when the selected MetaMask provider changes", async () => {
     const listeners = new Map<string, (...args: unknown[]) => void>();
     const selected: MetaMaskProvider = {
