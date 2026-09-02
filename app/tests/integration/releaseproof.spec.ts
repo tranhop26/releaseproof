@@ -165,6 +165,15 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
 
   const firstHash = await page.locator(".timeline-hash").textContent();
   expect(firstHash).toMatch(/^0x[0-9a-f]+$/i);
+  const expectedBinding = [
+    "releaseproof-case-v2",
+    "reproducibility-v1",
+    "submit_case",
+    "carbofozzz/questera",
+    "52d0e41bbc351bd69bf270bec0143eba40413dcc",
+    "README.md",
+    "476efb7e033fab131ac56330423c2d457bfa0d3f8340624aa3f4114a888e197b",
+  ].join("|");
   await page.evaluate(({ hash, binding }) => {
     sessionStorage.setItem("releaseproof:pendingTransaction", JSON.stringify({
       version: 1,
@@ -174,20 +183,23 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
     }));
   }, {
     hash: firstHash,
-    binding: [
-      "releaseproof-case-v2",
-      "reproducibility-v1",
-      "submit_case",
-      "carbofozzz/questera",
-      "52d0e41bbc351bd69bf270bec0143eba40413dcc",
-      "README.md",
-      "476efb7e033fab131ac56330423c2d457bfa0d3f8340624aa3f4114a888e197b",
-    ].join("|"),
+    binding: expectedBinding,
   });
   await page.reload();
   await expect(page.getByText("Authoritative contract readback")).toBeVisible({ timeout: 45_000 });
   await expect(page.getByText("#1")).toBeVisible();
   await page.getByRole("button", { name: "Connect MetaMask" }).click();
+  await expect(page.getByRole("button", { name: "Ask validators to resolve" })).toBeVisible();
+  await page.getByRole("button", { name: "Ask validators to resolve" }).click();
+  await expect(page.getByText(/Reproducibility verified|Requirements not met|Unresolved evidence/)).toBeVisible({ timeout: 45_000 });
+  for (const label of ["Schema", "Binding", "Observed", "Resolved"]) {
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByTitle(expectedBinding)).toHaveText(expectedBinding);
+  const observed = await page.locator(".readback-grid > div").filter({ hasText: /^Observed/ }).locator("dd").textContent();
+  const resolved = await page.locator(".readback-grid > div").filter({ hasText: /^Resolved/ }).locator("dd").textContent();
+  expect(observed).not.toBe("—");
+  expect(observed).toBe(resolved);
 
   await page.getByLabel("GitHub repository").fill("carbofozzz/questera");
   await page.getByLabel("Commit SHA").fill("52d0e41bbc351bd69bf270bec0143eba40413dcc");
