@@ -1,7 +1,21 @@
 # Live evidence
 
+Replace every `_BLANK - ..._` marker before publishing final evidence. Final
+evidence must not contain any blank proof field.
+
+- Application source commit: `_BLANK - exact commit after deployment and frontend cutover_`
+- Current production Vercel URL: `_BLANK - exact URL of the live deployment under review_`
+- Current Vercel deployment ID/status: `_BLANK - exact deployment identifier and readiness state_`
+- Successor contract address: `_BLANK - exact v2 Studionet address after verified deployment_`
+
 | Actor | Action | Contract method | Transaction | State | Authoritative readback |
 |---|---|---|---|---|---|
-| Researcher | Submit pinned evidence | `submit_case` | _fill after live test_ | `SUBMITTED` | `get_case(case_id)` |
-| Resolver | Ask validators to decide | `resolve_case` | _fill after live test_ | `VERIFIED`, `REJECTED`, or `UNRESOLVED` | `get_case(case_id)` |
-| Researcher | Repeat the same binding | `submit_case` | _fill after live test_ | execution error; prior state unchanged | `get_case(case_id)` |
+| Operator | Current Vercel production deployment | `n/a` | `_BLANK - Vercel deployment ID or deployment URL_` | `_BLANK - READY or equivalent live status_` | `_BLANK - public URL serves the reviewed build_` |
+| Wallet user | Live MetaMask and GenLayer Snap preparation | `n/a` | `_BLANK - browser proof or recorded session artifact_` | `_BLANK - wallet connected on target network with Snap enabled_` | `_BLANK - app shows ready account/network state before writes_` |
+| Deployer | Deploy verified v2 successor | constructor | `_BLANK - finalized Studionet deployment transaction_` | `FINALIZED` | `_BLANK - address, explorer link, and manifest entry_` |
+| Verifier | Prove deployed source/schema equality | `get_case_count` | `_BLANK - deployment verification run or linked transaction context_` | `_BLANK - verified_` | `_BLANK - deployed source == local source; deployed schema == local schema; initial get_case_count = 0_` |
+| Researcher | Submit pinned evidence | `submit_case` | `_BLANK - finalized submit transaction_` | `SUBMITTED` | `_BLANK - get_case(case_id) shows v2 binding and canonical URL_` |
+| Resolver | Accepted semantic resolution | `resolve_case` | `_BLANK - finalized successful resolution transaction_` | `VERIFIED` or `REJECTED` | `_BLANK - get_case(case_id) shows terminal state, deterministic reason, resolver, observed_at, and resolved_at_` |
+| Resolver | Terminal stale or unsupported branch | `resolve_case` | `_BLANK - finalized terminal UNRESOLVED transaction_` | `UNRESOLVED` | `_BLANK - get_case(case_id) shows deterministic unresolved reason and preserved binding_` |
+| Researcher | Duplicate binding replay rejection | `submit_case` | `_BLANK - replay transaction hash or equivalent execution record_` | execution error; prior state unchanged | `_BLANK - duplicate binding rejected and get_case_count unchanged_` |
+| Any third party | Resolve someone else's submitted case | `resolve_case` | `_BLANK - finalized third-party resolver transaction_` | `VERIFIED`, `REJECTED`, or `UNRESOLVED` | `_BLANK - get_case(case_id).resolver differs from submitter_` |

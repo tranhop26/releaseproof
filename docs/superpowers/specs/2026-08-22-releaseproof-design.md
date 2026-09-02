@@ -1,10 +1,19 @@
-# ReleaseProof Design
+# ReleaseProof Historical v1 Design
 
 ## Scope
 
+This document records the August 22, 2026 design for the historical v1
+production predecessor. The repository source now targets the pending v2
+successor described in `docs/superpowers/specs/2026-09-02-releaseproof-v2-design.md`;
+do not read this file as a claim that v2 is already deployed.
+
 ReleaseProof is a GenLayer MVP that records whether a research artifact pinned to an immutable GitHub commit satisfies a fixed reproducibility policy. It does not reproduce the experiment, assess scientific truth, transfer funds, or rank research quality.
 
-The MVP supports one complete flow: a wallet submits a case, any wallet can request resolution once, GenLayer validators evaluate the pinned evidence, and the contract permanently records `VERIFIED`, `REJECTED`, or `UNRESOLVED` with a readback-safe explanation.
+The predecessor MVP supports one complete flow: a wallet submits a case, any
+wallet can request resolution, GenLayer validators evaluate the pinned
+evidence, and the contract permanently records `VERIFIED`, `REJECTED`, or
+`UNRESOLVED` with a readback-safe explanation. Consensus rollback is not a
+terminal result: it preserves `SUBMITTED` and permits a later retry.
 
 ## Trust model
 
@@ -33,9 +42,12 @@ The on-chain consequence is a permanent terminal case result:
 
 - `VERIFIED` when every criterion is supported;
 - `REJECTED` when evidence is available and at least one criterion is demonstrably not supported;
-- `UNRESOLVED` when evidence cannot safely support either conclusion, including unavailable, malformed, contradictory, stale-at-submission, identity-mismatched evidence, or validator consensus failure.
+- `UNRESOLVED` when evidence cannot safely support either conclusion, including unavailable, malformed, contradictory, stale-at-submission, or identity-mismatched evidence.
 
 No caller, owner, backend, or frontend can select or edit the outcome.
+
+Validator consensus failure is not persisted as `UNRESOLVED`. The attempted
+write rolls back, the case remains `SUBMITTED`, and a later retry is allowed.
 
 ## Evidence binding
 
@@ -45,7 +57,7 @@ Each case stores:
 - subject: lowercase `owner/repository` plus exact 40-character commit SHA;
 - artifact identity: normalized repository-relative Markdown path;
 - submitter: transaction sender;
-- schema/content version: `releaseproof-case-v1`;
+- schema/content version: historical predecessor `releaseproof-case-v1`;
 - policy version: `reproducibility-v1`;
 - observation time: validator fetch time reported in the decision explanation;
 - submission time: GenLayer transaction time stored by the contract;
@@ -53,14 +65,18 @@ Each case stores:
 - replay domain: schema version + policy version + normalized repository + commit SHA + canonical artifact path + evidence digest; deployment manifests identify the separate chain and contract domain;
 - integrity: contract-derived canonical URL and a stored deterministic binding string/hash supplied at creation and rechecked before resolution.
 
-The contract never accepts an arbitrary fetch URL. Missing, oversized, non-text, inaccessible, redirected outside approved GitHub hosts, commit-mismatched, or ambiguous evidence resolves safely to `UNRESOLVED` or rejects before consensus, depending on whether the defect is structural or environmental.
+The contract never accepts an arbitrary fetch URL. Missing, oversized, non-text,
+inaccessible, commit-mismatched, or ambiguous evidence resolves safely to
+`UNRESOLVED` or rejects before consensus, depending on whether the defect is
+structural or environmental. The public design does not claim to validate
+alternate fetch destinations beyond requesting canonical GitHub URLs.
 
 ## State machine
 
 | From | Actor | Method | Preconditions | On-chain effect | To | Replay behavior |
 |---|---|---|---|---|---|---|
 | none | Any connected wallet | `submit_case(...)` | Valid binding fields; unique binding; future-safe timestamp | Stores immutable evidence and submitter; allocates case ID | `SUBMITTED` | Duplicate binding rejected |
-| `SUBMITTED` | Any connected wallet | `resolve_case(case_id)` | Case exists; within 30 days; not previously requested | Marks resolution attempt and runs validator consensus over stored evidence | `VERIFIED`, `REJECTED`, or `UNRESOLVED` | Second call rejected |
+| `SUBMITTED` | Any connected wallet | `resolve_case(case_id)` | Case exists; within 30 days; not terminal | Runs validator consensus over stored evidence | `VERIFIED`, `REJECTED`, or `UNRESOLVED` | Consensus rollback preserves `SUBMITTED`; terminal result blocks later calls |
 | terminal | Any wallet | view methods | Case exists | No mutation; returns authoritative state and binding | unchanged | Idempotent read |
 
 `PENDING_CONSENSUS`, transaction `FINALIZED`, execution `SUCCESS`, and readback are transaction/UI phases rather than separately writable domain states. The frontend never displays a terminal result until the finalized receipt succeeds and a contract read returns that terminal state.
@@ -75,7 +91,13 @@ One Python Intelligent Contract is the source of truth. Planned public interface
 - `get_case_count() -> int`
 - `get_case_id_by_binding(binding) -> int`
 
-The nondeterministic leader fetches bound evidence and returns a strict decision object containing outcome, four criterion booleans, concise reason, and observed source identity. Validators independently fetch the same pinned artifact, evaluate the same policy, and require semantic equivalence on outcome and every criterion—not merely valid JSON shape. Any runtime or consensus failure must not write `VERIFIED`.
+The nondeterministic leader fetches bound evidence and returns a strict decision
+object containing outcome, four criterion booleans, and observed source
+identity. Validators independently fetch the same pinned artifact, evaluate the
+same policy, and require semantic equivalence on outcome and every criterion,
+not merely valid JSON shape. The contract persists deterministic reasons rather
+than leader-supplied prose. Any runtime or consensus failure must not write
+`VERIFIED`.
 
 The contract is `INTENTIONALLY_FROZEN`. Recovery is migration: deploy a versioned successor, publish a manifest linking predecessor and successor, and preserve old cases as immutable read-only history. There is no privileged upgrade path.
 
@@ -137,7 +159,11 @@ Test-first development covers:
 - frontend wallet-disconnected, pending, finalized, success, error, `UNRESOLVED`, and readback states;
 - local integration from UI contract adapter through actual GenLayer test tooling, plus live Studionet happy path and one important error branch after deployment authorization.
 
-Completion requires fresh lint, build, all direct tests, all integration tests, deployed source/address verification, one successful live transaction, one live important error transaction, finalized receipt, and contract readback.
+Completion requires fresh direct tests, simulator tests, frontend unit tests,
+frontend integration tests, frontend E2E tests, lint, frontend build, script
+tests, script typecheck, deployed source/address verification, one successful
+live transaction, one live important error transaction, finalized receipt, and
+contract readback.
 
 ## Explicit non-goals
 
