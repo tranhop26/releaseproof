@@ -79,6 +79,7 @@ def test_public_submission_record_uses_the_v2_evidence_domain():
 
         case = json.loads(engine.call_method(address, "get_case", [case_id]))
         assert case["schema_version"] == "releaseproof-case-v2"
+        assert "|submit_case|" in case["binding"]
         assert case["binding"] == "|".join([
             "releaseproof-case-v2",
             "reproducibility-v1",
