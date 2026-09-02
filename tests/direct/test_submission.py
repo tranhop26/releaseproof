@@ -3,6 +3,12 @@ import json
 import pytest
 
 from conftest import CONTRACT_PATH
+from fixtures.evidence import (
+    ARTIFACT_PATH,
+    COMMIT_SHA,
+    EVIDENCE_HASH,
+    REPOSITORY,
+)
 
 
 VALID_REPOSITORY = "OpenScience/Trial-A"
@@ -12,22 +18,22 @@ VALID_DIGEST = "b" * 64
 
 
 def test_submit_stores_immutable_binding(direct_vm, direct_deploy):
-    """Catches lost normalization, policy binding, or initial state writes."""
+    """Catches a submission record without its versioned replay domain."""
     contract = direct_deploy(CONTRACT_PATH)
 
     case_id = contract.submit_case(
-        VALID_REPOSITORY,
-        VALID_SHA,
-        VALID_PATH,
-        VALID_DIGEST,
+        REPOSITORY,
+        COMMIT_SHA,
+        ARTIFACT_PATH,
+        EVIDENCE_HASH,
     )
 
     case = json.loads(contract.get_case(case_id))
     assert case["case_id"] == 1
-    assert case["repository"] == "openscience/trial-a"
-    assert case["commit_sha"] == VALID_SHA
-    assert case["artifact_path"] == VALID_PATH
-    assert case["evidence_hash"] == VALID_DIGEST
+    assert case["repository"] == REPOSITORY
+    assert case["commit_sha"] == COMMIT_SHA
+    assert case["artifact_path"] == ARTIFACT_PATH
+    assert case["evidence_hash"] == EVIDENCE_HASH
     assert case["state"] == "SUBMITTED"
     assert case["outcome"] == ""
     assert case["criteria"] == {
@@ -37,7 +43,17 @@ def test_submit_stores_immutable_binding(direct_vm, direct_deploy):
         "limitations": False,
     }
     assert case["policy_version"] == "reproducibility-v1"
-    assert case["schema_version"] == "releaseproof-case-v1"
+    assert case["schema_version"] == "releaseproof-case-v2"
+    assert case["binding"] == "|".join([
+        "releaseproof-case-v2",
+        "reproducibility-v1",
+        "submit_case",
+        REPOSITORY,
+        COMMIT_SHA,
+        ARTIFACT_PATH,
+        EVIDENCE_HASH,
+    ])
+    assert case["observed_at"] == ""
     assert contract.get_case_count() == 1
     assert contract.get_case_id_by_binding(case["binding"]) == 1
 

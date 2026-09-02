@@ -39,7 +39,6 @@ def decision(outcome="VERIFIED", limitations=True):
                 "results": True,
                 "limitations": limitations,
             },
-            "reason": "Pinned evidence supports this policy decision.",
             "observed_repository": REPOSITORY,
             "observed_commit": COMMIT_SHA,
             "observed_path": ARTIFACT_PATH,
@@ -97,7 +96,16 @@ def test_agreeing_validators_finalize_real_contract_state():
 
         assert consensus.status.value == "FINALIZED"
         assert all(vote == "agree" for vote in consensus.votes)
-        assert read_case(engine, address, case_id)["state"] == "VERIFIED"
+        case = read_case(engine, address, case_id)
+
+        # These assertions catch a finalized readback that regresses to v1,
+        # loses the submit action from its replay domain, or timestamps only
+        # one side of the terminal observation/resolution pair.
+        assert case["state"] == "VERIFIED"
+        assert case["schema_version"] == "releaseproof-case-v2"
+        assert "|submit_case|" in case["binding"]
+        assert case["observed_at"] != ""
+        assert case["observed_at"] == case["resolved_at"]
 
 
 def test_validator_disagreement_is_undetermined_and_preserves_submission():
@@ -105,6 +113,7 @@ def test_validator_disagreement_is_undetermined_and_preserves_submission():
     with TestClient(app):
         engine = app.state.engine
         address, case_id = deploy_and_submit(engine)
+        submitted_case = read_case(engine, address, case_id)
         calldata = encode_calldata_result(
             {"method": "resolve_case", "args": [case_id]}
         )
@@ -124,5 +133,7 @@ def test_validator_disagreement_is_undetermined_and_preserves_submission():
 
         assert consensus.status.value == "UNDETERMINED"
         assert sum(vote == "disagree" for vote in consensus.votes) >= 3
+        # A failed five-validator decision must leave the original submission
+        # intact, rather than persisting any leader-only terminal fields.
+        assert case == submitted_case
         assert case["state"] == "SUBMITTED"
-        assert case["outcome"] == ""

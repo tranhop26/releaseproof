@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { CaseReadback } from "./CaseReadback";
 import { CaseWorkspace, type WorkspacePhase } from "./CaseWorkspace";
+import { TransactionTimeline } from "./TransactionTimeline";
 import type { CaseRecord } from "../../contract/types";
 
 
@@ -54,10 +55,11 @@ describe("CaseWorkspace", () => {
       commit_sha: "a".repeat(40),
       artifact_path: "reports/reproduction.md",
       evidence_hash: "b".repeat(64),
-      binding: "releaseproof-case-v1|reproducibility-v1|evidence",
-      schema_version: "releaseproof-case-v1",
+      binding: "releaseproof-case-v2|reproducibility-v1|submit_case|evidence",
+      schema_version: "releaseproof-case-v2",
       policy_version: "reproducibility-v1",
       submitted_at: "2026-01-01T00:00:00Z",
+      observed_at: "",
       state: "SUBMITTED",
       outcome: "",
       reason: "",
@@ -112,10 +114,11 @@ describe("CaseWorkspace", () => {
       commit_sha: "a".repeat(40),
       artifact_path: "reports/reproduction.md",
       evidence_hash: "b".repeat(64),
-      binding: "releaseproof-case-v1|reproducibility-v1|openscience/trial-a|binding",
-      schema_version: "releaseproof-case-v1",
+      binding: "releaseproof-case-v2|reproducibility-v1|submit_case|openscience/trial-a|binding",
+      schema_version: "releaseproof-case-v2",
       policy_version: "reproducibility-v1",
       submitted_at: "2026-01-01T00:00:00Z",
+      observed_at: "",
       state: "SUBMITTED",
       outcome: "",
       reason: "",
@@ -189,10 +192,11 @@ describe("CaseReadback", () => {
       commit_sha: "a".repeat(40),
       artifact_path: "reports/reproduction.md",
       evidence_hash: "b".repeat(64),
-      binding: "releaseproof-case-v1|reproducibility-v1|evidence",
-      schema_version: "releaseproof-case-v1",
+      binding: "releaseproof-case-v2|reproducibility-v1|submit_case|evidence",
+      schema_version: "releaseproof-case-v2",
       policy_version: "reproducibility-v1",
       submitted_at: "2026-01-01T00:00:00Z",
+      observed_at: "2026-01-01T00:01:00Z",
       state: "UNRESOLVED",
       outcome: "UNRESOLVED",
       reason: "Validators could not establish a safe decision.",
@@ -211,5 +215,30 @@ describe("CaseReadback", () => {
     expect(screen.getByText("Unresolved evidence")).toBeVisible();
     expect(screen.queryByText("Execution failed")).not.toBeInTheDocument();
     expect(screen.getByText("Validators could not establish a safe decision.")).toBeVisible();
+    for (const label of ["Schema", "Submitter", "Resolver", "Submitted", "Observed", "Resolved", "Binding"]) {
+      expect(screen.getByText(label)).toBeVisible();
+    }
+    expect(screen.getByTitle(unresolved.binding)).toHaveTextContent(unresolved.binding);
+    expect(screen.getByTitle(unresolved.submitter)).toHaveTextContent(unresolved.submitter);
+    expect(screen.getByTitle(unresolved.resolver)).toHaveTextContent(unresolved.resolver);
+    expect(screen.getByTitle(unresolved.observed_at)).toHaveTextContent(unresolved.observed_at);
+  });
+});
+
+describe("TransactionTimeline", () => {
+  const hash = `0x${"a".repeat(64)}`;
+
+  it("links a Studionet transaction to its explorer", () => {
+    render(<TransactionTimeline hash={hash} network="studionet" phase="pending" />);
+    expect(screen.getByRole("link", { name: hash })).toHaveAttribute(
+      "href",
+      `https://explorer-studio.genlayer.com/tx/${hash}`,
+    );
+  });
+
+  it("keeps a localnet transaction as ordinary hash text", () => {
+    render(<TransactionTimeline hash={hash} network="localnet" phase="pending" />);
+    expect(screen.getByText(hash)).toBeVisible();
+    expect(screen.queryByRole("link", { name: hash })).not.toBeInTheDocument();
   });
 });

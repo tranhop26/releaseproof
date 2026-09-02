@@ -1,10 +1,17 @@
 import ast
+import json
 from pathlib import Path
 
 from glsim.server import create_app
 from starlette.testclient import TestClient
 
 from conftest import CONTRACT_PATH
+
+
+REPOSITORY = "openscience/trial-a"
+COMMIT_SHA = "a" * 40
+ARTIFACT_PATH = "reports/reproduction.md"
+EVIDENCE_HASH = "b" * 64
 
 
 EXPECTED_METHODS = {
@@ -56,3 +63,30 @@ def test_public_schema_is_intentionally_frozen():
 
         assert method_names == EXPECTED_METHODS
         assert method_names.isdisjoint(FORBIDDEN_METHODS)
+
+
+def test_public_submission_record_uses_the_v2_evidence_domain():
+    """Catches public readback that omits version, action, or observation state."""
+    app = create_app(num_validators=1, max_rotations=1)
+    with TestClient(app):
+        engine = app.state.engine
+        address, _ = engine.deploy(CONTRACT_PATH)
+        case_id = engine.call_method(
+            address,
+            "submit_case",
+            [REPOSITORY, COMMIT_SHA, ARTIFACT_PATH, EVIDENCE_HASH],
+        )
+
+        case = json.loads(engine.call_method(address, "get_case", [case_id]))
+        assert case["schema_version"] == "releaseproof-case-v2"
+        assert "|submit_case|" in case["binding"]
+        assert case["binding"] == "|".join([
+            "releaseproof-case-v2",
+            "reproducibility-v1",
+            "submit_case",
+            REPOSITORY,
+            COMMIT_SHA,
+            ARTIFACT_PATH,
+            EVIDENCE_HASH,
+        ])
+        assert case["observed_at"] == ""

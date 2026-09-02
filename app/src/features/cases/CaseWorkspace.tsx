@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { ReleaseProofApi } from "../../contract/client";
 import type { CaseRecord, SubmissionInput, TransactionHash } from "../../contract/types";
+import { configuredNetworkName } from "../../contract/config";
 import { CaseForm } from "./CaseForm";
 import { CaseReadback } from "./CaseReadback";
 import { TransactionTimeline } from "./TransactionTimeline";
@@ -53,8 +54,9 @@ function savePending(value: PendingTransaction) {
 
 function bindingFor(input: SubmissionInput) {
   return [
-    "releaseproof-case-v1",
+    "releaseproof-case-v2",
     "reproducibility-v1",
+    "submit_case",
     input.repository.trim().toLowerCase(),
     input.commitSha.trim().toLowerCase(),
     input.artifactPath.trim(),
@@ -87,6 +89,7 @@ export function CaseWorkspace({
   const activeReadApi = readApi ?? contractApi ?? writeApi;
   const activeWriteApi = writeApi ?? (connected ? contractApi : undefined);
   const busy = ["signing", "pending", "finalized", "success"].includes(phase);
+  const network = configuredNetworkName();
 
   useEffect(() => {
     if (initialPhase === "idle") {
@@ -236,7 +239,7 @@ export function CaseWorkspace({
         </section>
 
         <aside className="activity-column" aria-label="Transaction status and lookup">
-          <TransactionTimeline phase={phase} hash={hash} milestones={milestones} />
+          <TransactionTimeline phase={phase} hash={hash} network={network} milestones={milestones} />
           {error && <div className="error-banner" role="alert">{error}</div>}
           {pendingTransaction && ["pending", "execution_error", "error"].includes(phase) && (
             <div className="transaction-actions">

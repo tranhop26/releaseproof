@@ -1,0 +1,14 @@
+{
+  "network": "studionet",
+  "contractAddress": "0x946BC9B19BD971CBefb56845b5825FB7B9f6b183",
+  "deploymentTransactionHash": "0x5e449a2d3ae62c7b6f0df9aa884014c5a5fcf48e94d8f6745a29f2f9495a17f8",
+  "explorerUrl": "https://explorer-studio.genlayer.com/tx/0x5e449a2d3ae62c7b6f0df9aa884014c5a5fcf48e94d8f6745a29f2f9495a17f8",
+  "sourceSha256": "1dfb74d2fb03be493abb6a259fcea65de99441b40b26acb7dd7134da17a757ab",
+  "deployerAddress": "0x21b45103dd05c43969daF3CbB4277391777e2eC7",
+  "deployedAt": "2026-08-23T03:35:26.160095+00:00",
+  "policyVersion": "reproducibility-v1",
+  "schemaVersion": "releaseproof-case-v1",
+  "classification": "INTENTIONALLY_FROZEN",
+  "predecessor": "0x10aE8E49717D9E90398F9E783bf6db7d25Be1A69",
+  "successor": "0x8802668Ce23EbCF6ef6b02df50a0a434Fd986514"
+}
