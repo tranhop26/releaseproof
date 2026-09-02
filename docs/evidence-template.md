@@ -4,9 +4,18 @@ Replace every `_BLANK - ..._` marker before publishing final evidence. Final
 evidence must not contain any blank proof field.
 
 - Application source commit: `_BLANK - exact commit after deployment and frontend cutover_`
+- Contract source SHA-256: `_BLANK - exact SHA-256 of the deployed local contract source_`
 - Current production Vercel URL: `_BLANK - exact URL of the live deployment under review_`
 - Current Vercel deployment ID/status: `_BLANK - exact deployment identifier and readiness state_`
 - Successor contract address: `_BLANK - exact v2 Studionet address after verified deployment_`
+- Fresh contract test count: `_BLANK - exact passing direct + simulator contract test count from the latest verification run_`
+- Fresh frontend test count: `_BLANK - exact passing frontend unit/integration test count from the latest verification run_`
+- Fresh adapter test count: `_BLANK - exact passing contract-adapter test count from the latest verification run_`
+- Fresh E2E test count: `_BLANK - exact passing end-to-end test count from the latest verification run_`
+- Fresh script test count: `_BLANK - exact passing script test count from the latest verification run_`
+- Latest lint result: `_BLANK - exact command result from the latest verification run_`
+- Latest build result: `_BLANK - exact command result from the latest verification run_`
+- Known limitations: `_BLANK - every remaining material limitation, including any unverified deployedAt receipt-timestamp caveat_`
 
 | Actor | Action | Contract method | Transaction | State | Authoritative readback |
 |---|---|---|---|---|---|

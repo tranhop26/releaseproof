@@ -378,7 +378,7 @@ def _decision_reason(outcome: str, criteria: dict) -> str:
     if outcome == REJECTED:
         unsupported = [name for name in _CRITERION_NAMES if not criteria[name]]
         return "Unsupported criteria: " + ", ".join(unsupported) + "."
-    return "Validator response was malformed or contradictory."
+    return "Evidence was ambiguous, contradictory, or insufficient for a safe decision."
 
 
 def _parse_datetime(value: str) -> datetime:

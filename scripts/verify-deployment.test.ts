@@ -177,4 +177,29 @@ describe("verifyDeployment", () => {
       },
     );
   });
+
+  it("writes the authoritative Studionet transaction explorer URL into the successor manifest", async () => {
+    await withManifestFixtures(
+      () => {},
+      async (currentPath, historicalPath) => {
+        const localSource = await readFile(resolve("contracts/releaseproof.py"), "utf8");
+        const deploymentTransactionHash = `0x${"1".repeat(64)}` as const;
+
+        const { successorManifest } = await deployVerifiedSuccessor({
+          currentManifestPath: currentPath,
+          historicalManifestPath: historicalPath,
+          runDeployment: async () => ({
+            client: clientFor(localSource),
+            contractAddress: `0x${"2".repeat(40)}` as const,
+            deploymentTransactionHash,
+            deployerAddress: `0x${"3".repeat(40)}` as const,
+          }),
+        });
+
+        expect(successorManifest.explorerUrl).toBe(
+          `https://explorer-studio.genlayer.com/tx/${deploymentTransactionHash}`,
+        );
+      },
+    );
+  });
 });

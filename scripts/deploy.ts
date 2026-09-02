@@ -6,6 +6,7 @@ import { createAccount, createClient } from "genlayer-js";
 import { studionet } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
 
+import { buildStudionetTransactionExplorerUrl } from "./explorer-url";
 import { verifyDeployment, type VerificationClient } from "./verify-deployment";
 import {
   EXPECTED_PREDECESSOR,
@@ -214,13 +215,11 @@ export async function deployVerifiedSuccessor(options: DeploymentOptions = {}) {
   const deployment = await (options.runDeployment ?? runStudionetDeployment)(source);
 
   const verified = await verifyDeployment(deployment.client, deployment.contractAddress, source);
-  const explorerBase = studionet.blockExplorers?.default.url.replace(/\/$/, "");
-  if (!explorerBase) throw new Error("Studionet explorer is not configured");
   const manifestInput: ManifestInput = {
     network: "studionet" as const,
     contractAddress: deployment.contractAddress,
     deploymentTransactionHash: deployment.deploymentTransactionHash,
-    explorerUrl: `${explorerBase}/transactions/${deployment.deploymentTransactionHash}`,
+    explorerUrl: buildStudionetTransactionExplorerUrl(deployment.deploymentTransactionHash),
     sourceSha256: verified.sourceSha256,
     deployerAddress: deployment.deployerAddress,
     deployedAt: new Date().toISOString(),

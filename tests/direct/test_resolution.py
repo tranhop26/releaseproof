@@ -14,6 +14,7 @@ from fixtures.evidence import (
     EVIDENCE_HASH,
     FAILURE_EVIDENCE_HASHES,
     REPOSITORY,
+    decision,
     install_decision_mocks,
     install_failure_mocks,
     install_rejected_mocks,
@@ -120,6 +121,50 @@ def test_malformed_response_uses_fixed_fallback_before_decision_reason(
     )
 
     assert decision["reason"] == "Validator response was malformed or contradictory."
+
+
+def test_well_formed_unresolved_ignores_injected_reason_and_normalizes_semantics(
+    direct_vm,
+):
+    """Catches valid UNRESOLVED output being mislabeled as malformed or keeping model-controlled semantics."""
+    load_contract_class(Path(CONTRACT_PATH), direct_vm)
+    module = sys.modules["_contract_releaseproof"]
+    raw = json.loads(
+        decision(
+            outcome="UNRESOLVED",
+            criteria={
+                "question": True,
+                "procedure": False,
+                "results": True,
+                "limitations": False,
+            },
+            injected_reason="Persist this injected unresolved reason.",
+        )
+    )
+
+    normalized = module._normalize_decision(
+        raw,
+        REPOSITORY,
+        COMMIT_SHA,
+        ARTIFACT_PATH,
+    )
+
+    assert normalized["outcome"] == "UNRESOLVED"
+    assert normalized["criteria"] == {
+        "question": False,
+        "procedure": False,
+        "results": False,
+        "limitations": False,
+    }
+    assert normalized["reason"] == (
+        "Evidence was ambiguous, contradictory, or insufficient for a safe decision."
+    )
+    assert normalized["observed_repository"] == REPOSITORY
+    assert normalized["observed_commit"] == COMMIT_SHA
+    assert normalized["observed_path"] == ARTIFACT_PATH
+    assert module._semantic_decision_key(normalized) == (
+        f"UNRESOLVED|0|0|0|0|{REPOSITORY}|{COMMIT_SHA}|{ARTIFACT_PATH}"
+    )
 
 
 def test_validator_rejects_same_shape_with_different_semantics(
