@@ -1,21 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createReadClient,
   createReleaseProofApi,
   createWalletClient,
   type ReleaseProofApi,
-  type WalletProvider,
 } from "./contract/client";
-import { configuredContractAddress, configuredNetworkName } from "./contract/config";
+import {
+  configuredChain,
+  configuredContractAddress,
+  configuredNetworkName,
+} from "./contract/config";
 import { CaseWorkspace } from "./features/cases/CaseWorkspace";
-
-
-declare global {
-  interface Window {
-    ethereum?: WalletProvider;
-  }
-}
+import {
+  connectMetaMask,
+  walletErrorMessage,
+  type MetaMaskProvider,
+} from "./wallet/metamask";
 
 function shortAddress(value: string) {
   return `${value.slice(0, 6)}…${value.slice(-4)}`;
@@ -24,7 +25,10 @@ function shortAddress(value: string) {
 export default function App() {
   const [walletAddress, setWalletAddress] = useState("");
   const [walletApi, setWalletApi] = useState<ReleaseProofApi>();
+  const [walletProvider, setWalletProvider] = useState<MetaMaskProvider>();
   const [walletError, setWalletError] = useState("");
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const mounted = useRef(true);
   const readApi = useMemo(() => {
     try {
       return createReleaseProofApi(createReadClient(), configuredContractAddress());
@@ -35,40 +39,49 @@ export default function App() {
   const networkName = configuredNetworkName();
 
   useEffect(() => {
-    const provider = window.ethereum;
-    if (!provider?.on) return;
-    const invalidateWallet = () => {
-      setWalletAddress("");
-      setWalletApi(undefined);
-      setWalletError("Wallet changed. Reconnect to continue safely.");
-    };
-    provider.on("accountsChanged", invalidateWallet);
-    provider.on("chainChanged", invalidateWallet);
-    provider.on("disconnect", invalidateWallet);
+    mounted.current = true;
     return () => {
-      provider.removeListener?.("accountsChanged", invalidateWallet);
-      provider.removeListener?.("chainChanged", invalidateWallet);
-      provider.removeListener?.("disconnect", invalidateWallet);
+      mounted.current = false;
     };
   }, []);
 
+  useEffect(() => {
+    if (!walletProvider?.on) return;
+    const invalidateWallet = () => {
+      setWalletAddress("");
+      setWalletApi(undefined);
+      setWalletProvider(undefined);
+      setWalletError("Wallet changed. Reconnect to continue safely.");
+    };
+    walletProvider.on("accountsChanged", invalidateWallet);
+    walletProvider.on("chainChanged", invalidateWallet);
+    walletProvider.on("disconnect", invalidateWallet);
+    return () => {
+      walletProvider.removeListener?.("accountsChanged", invalidateWallet);
+      walletProvider.removeListener?.("chainChanged", invalidateWallet);
+      walletProvider.removeListener?.("disconnect", invalidateWallet);
+    };
+  }, [walletProvider]);
+
   async function connectWallet() {
-    if (!window.ethereum) {
-      setWalletError("No injected wallet was found.");
-      return;
-    }
+    if (walletConnecting) return;
+    setWalletConnecting(true);
     try {
       setWalletError("");
-      const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-      if (!Array.isArray(accounts) || typeof accounts[0] !== "string") {
-        throw new Error("Wallet did not return an account");
-      }
-      const client = createWalletClient(accounts[0], window.ethereum);
-      await client.connect(networkName);
-      setWalletAddress(accounts[0]);
-      setWalletApi(createReleaseProofApi(client, configuredContractAddress()));
-    } catch (caught) {
-      setWalletError(caught instanceof Error ? caught.message : "Wallet connection failed");
+      setWalletAddress("");
+      setWalletApi(undefined);
+      setWalletProvider(undefined);
+      const connected = await connectMetaMask(window.ethereum, configuredChain());
+      if (!mounted.current) return;
+      const client = createWalletClient(connected.address, connected.provider);
+      const api = createReleaseProofApi(client, configuredContractAddress());
+      setWalletProvider(connected.provider);
+      setWalletAddress(connected.address);
+      setWalletApi(api);
+    } catch (error) {
+      if (mounted.current) setWalletError(walletErrorMessage(error));
+    } finally {
+      if (mounted.current) setWalletConnecting(false);
     }
   }
 
@@ -92,9 +105,14 @@ export default function App() {
       <div className="main-column" id="top">
         <header className="topbar">
           <div className="breadcrumb"><span>Registry</span><b>/</b><strong>Evidence workspace</strong></div>
-          <button className={walletAddress ? "wallet-button connected" : "wallet-button"} onClick={connectWallet} type="button">
+          <button
+            className={walletAddress ? "wallet-button connected" : "wallet-button"}
+            disabled={walletConnecting}
+            onClick={connectWallet}
+            type="button"
+          >
             <span className="wallet-indicator" />
-            {walletAddress ? shortAddress(walletAddress) : "Connect wallet"}
+            {walletAddress ? shortAddress(walletAddress) : "Connect MetaMask"}
           </button>
         </header>
         {walletError && <div className="global-error" role="alert">{walletError}</div>}

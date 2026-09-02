@@ -70,8 +70,12 @@ vercel --prod
 
 The contract script waits for finalization, verifies deployed source/schema and
 `get_case_count`, then writes `deployments/studionet.json`. Set the manifest address
-as `VITE_GENLAYER_CONTRACT_ADDRESS` before building the frontend. In the app,
-connect an injected wallet, submit `owner/repository`, a 40-character commit, a
+as `VITE_GENLAYER_CONTRACT_ADDRESS` before building the frontend. In the app, use
+unlocked desktop MetaMask with Snaps enabled. Click `Connect MetaMask`;
+ReleaseProof selects MetaMask even when another injected wallet is installed,
+switches to the configured GenLayer network, and requests the published
+`npm:genlayer-wallet-plugin` Snap when absent. Approve the account, network, and
+Snap prompts before submitting `owner/repository`, a 40-character commit, a
 Markdown path, and the raw file SHA-256; then resolve or read the case by ID.
 
 Studionet deployment: [`0x946BC9B19BD971CBefb56845b5825FB7B9f6b183`](https://explorer-studio.genlayer.com/address/0x946BC9B19BD971CBefb56845b5825FB7B9f6b183),
