@@ -145,9 +145,20 @@ class ReleaseProof(gl.Contract):
         if record.state in _TERMINAL_STATES:
             raise ValueError("Case is already terminal")
         submitted_at = _parse_datetime(record.submitted_at)
-        current_time = _parse_datetime(gl.message_raw["datetime"])
+        timestamp = gl.message_raw["datetime"]
+        current_time = _parse_datetime(timestamp)
         if (current_time - submitted_at).total_seconds() > 30 * 24 * 60 * 60:
-            raise ValueError("Resolution window expired")
+            self._finalize(
+                record,
+                {
+                    "outcome": UNRESOLVED,
+                    "criteria": {name: False for name in _CRITERION_NAMES},
+                    "reason": "Resolution window expired.",
+                },
+                gl.message.sender_address.as_hex,
+                timestamp,
+            )
+            return
 
         repository = record.repository
         commit_sha = record.commit_sha
@@ -203,14 +214,29 @@ class ReleaseProof(gl.Contract):
             )
 
         decision = gl.vm.run_nondet(leader_fn, validator_fn)
+        self._finalize(
+            record,
+            decision,
+            gl.message.sender_address.as_hex,
+            timestamp,
+        )
+
+    def _finalize(
+        self,
+        record: CaseRecord,
+        decision: dict,
+        resolver: str,
+        timestamp: str,
+    ) -> None:
         record.state = decision["outcome"]
         record.outcome = decision["outcome"]
         record.reason = decision["reason"]
         record.criteria_json = json.dumps(
             decision["criteria"], separators=(",", ":"), sort_keys=True
         )
-        record.resolver = gl.message.sender_address.as_hex
-        record.resolved_at = gl.message_raw["datetime"]
+        record.resolver = resolver
+        record.observed_at = timestamp
+        record.resolved_at = timestamp
 
     @gl.public.view
     def get_case(self, case_id: int) -> str:

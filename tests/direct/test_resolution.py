@@ -54,6 +54,7 @@ def test_resolve_verified_requires_all_criteria(direct_vm, direct_deploy):
     }
     assert case["resolver"] != ""
     assert case["resolved_at"] != ""
+    assert case["observed_at"] == case["resolved_at"]
     assert direct_vm.run_validator() is True
 
 
@@ -189,21 +190,36 @@ def test_evidence_failures_are_unresolved(
     assert case["reason"] == expected_reason
 
 
-def test_resolution_after_thirty_days_is_rejected(
+def test_resolution_after_thirty_days_becomes_unresolved_without_evaluation(
     direct_vm,
     direct_deploy,
 ):
-    """Catches stale source availability being treated as indefinitely fresh."""
+    """Catches expiry attempting evidence evaluation instead of finalizing safely."""
     direct_vm.warp("2026-01-01T00:00:00Z")
-    install_verified_mocks(direct_vm)
     contract = direct_deploy(CONTRACT_PATH)
     case_id = submit_bound_case(contract)
     direct_vm.warp("2026-02-01T00:00:01Z")
 
-    with direct_vm.expect_revert("Resolution window expired"):
+    contract.resolve_case(case_id)
+
+    finalized = read_case(contract, case_id)
+    assert finalized["state"] == "UNRESOLVED"
+    assert finalized["outcome"] == "UNRESOLVED"
+    assert finalized["reason"] == "Resolution window expired."
+    assert finalized["criteria"] == {
+        "question": False,
+        "procedure": False,
+        "results": False,
+        "limitations": False,
+    }
+    assert finalized["resolver"] != ""
+    assert finalized["observed_at"] == "2026-02-01T00:00:01Z"
+    assert finalized["resolved_at"] == finalized["observed_at"]
+
+    with direct_vm.expect_revert("Case is already terminal"):
         contract.resolve_case(case_id)
 
-    assert read_case(contract, case_id)["state"] == "SUBMITTED"
+    assert read_case(contract, case_id) == finalized
 
 
 def test_rejected_decision_is_terminal(direct_vm, direct_deploy):
