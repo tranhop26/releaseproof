@@ -98,6 +98,29 @@ def test_policy_prompt_marks_injected_artifact_as_untrusted(direct_vm):
     assert '"reason"' not in prompt
 
 
+def test_malformed_response_uses_fixed_fallback_before_decision_reason(
+    direct_vm,
+    monkeypatch,
+):
+    """Catches malformed input being routed through the validated-reason helper."""
+    load_contract_class(Path(CONTRACT_PATH), direct_vm)
+    module = sys.modules["_contract_releaseproof"]
+
+    def unexpected_decision_reason(outcome, criteria):
+        raise AssertionError("Malformed validator data must not reach _decision_reason")
+
+    monkeypatch.setattr(module, "_decision_reason", unexpected_decision_reason)
+
+    decision = module._normalize_decision(
+        "not-json",
+        REPOSITORY,
+        COMMIT_SHA,
+        ARTIFACT_PATH,
+    )
+
+    assert decision["reason"] == "Validator response was malformed or contradictory."
+
+
 def test_validator_rejects_same_shape_with_different_semantics(
     direct_vm,
     direct_deploy,

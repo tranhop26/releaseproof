@@ -304,7 +304,7 @@ def _normalize_decision(
     fallback = {
         "outcome": UNRESOLVED,
         "criteria": unsupported,
-        "reason": _decision_reason(UNRESOLVED, unsupported),
+        "reason": "Validator response was malformed or contradictory.",
         "observed_repository": repository,
         "observed_commit": commit_sha,
         "observed_path": artifact_path,
