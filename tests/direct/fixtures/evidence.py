@@ -37,7 +37,6 @@ def decision(outcome="VERIFIED", observed_path=ARTIFACT_PATH, **criteria_overrid
         {
             "outcome": outcome,
             "criteria": criteria,
-            "reason": "The pinned artifact supports the policy decision.",
             "observed_repository": REPOSITORY,
             "observed_commit": COMMIT_SHA,
             "observed_path": observed_path,

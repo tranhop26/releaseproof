@@ -11,8 +11,9 @@ import genlayer as genlayer_sdk
 from genlayer import gl
 
 
-SCHEMA_VERSION = "releaseproof-case-v1"
+SCHEMA_VERSION = "releaseproof-case-v2"
 POLICY_VERSION = "reproducibility-v1"
+ACTION_DOMAIN = "submit_case"
 SUBMITTED = "SUBMITTED"
 VERIFIED = "VERIFIED"
 REJECTED = "REJECTED"
@@ -46,6 +47,7 @@ class CaseRecord:
     resolver: str
     resolved_at: str
     canonical_url: str
+    observed_at: str
 
 
 class ReleaseProof(gl.Contract):
@@ -89,6 +91,7 @@ class ReleaseProof(gl.Contract):
             [
                 SCHEMA_VERSION,
                 POLICY_VERSION,
+                ACTION_DOMAIN,
                 repository_normalized,
                 commit_normalized,
                 artifact_normalized,
@@ -130,6 +133,7 @@ class ReleaseProof(gl.Contract):
             resolver="",
             resolved_at="",
             canonical_url=canonical_url,
+            observed_at="",
         )
         self.cases[case_id] = record
         self.binding_ids[binding] = case_id
@@ -227,6 +231,7 @@ class ReleaseProof(gl.Contract):
                 "resolver": record.resolver,
                 "resolved_at": record.resolved_at,
                 "canonical_url": record.canonical_url,
+                "observed_at": record.observed_at,
             },
             separators=(",", ":"),
             sort_keys=True,
