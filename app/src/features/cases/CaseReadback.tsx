@@ -46,11 +46,18 @@ export function CaseReadback({ value }: { value: CaseRecord }) {
 
       <dl className="readback-grid">
         <div><dt>Case</dt><dd>#{value.case_id}</dd></div>
+        <div><dt>Schema</dt><dd>{value.schema_version}</dd></div>
         <div><dt>Policy</dt><dd>{value.policy_version}</dd></div>
+        <div><dt>Submitter</dt><dd className="mono" title={value.submitter}>{value.submitter}</dd></div>
+        <div><dt>Resolver</dt><dd className="mono" title={value.resolver}>{value.resolver || "—"}</dd></div>
+        <div><dt>Submitted</dt><dd title={value.submitted_at}>{value.submitted_at}</dd></div>
+        <div><dt>Observed</dt><dd title={value.observed_at}>{value.observed_at || "—"}</dd></div>
+        <div><dt>Resolved</dt><dd>{value.resolved_at || "—"}</dd></div>
         <div><dt>Repository</dt><dd>{value.repository}</dd></div>
         <div><dt>Commit</dt><dd className="mono" title={value.commit_sha}>{short(value.commit_sha)}</dd></div>
         <div><dt>Artifact</dt><dd>{value.artifact_path}</dd></div>
         <div><dt>Evidence hash</dt><dd className="mono" title={value.evidence_hash}>{short(value.evidence_hash)}</dd></div>
+        <div className="binding-field"><dt>Binding</dt><dd className="mono" title={value.binding}>{value.binding}</dd></div>
       </dl>
 
       <a className="source-link" href={value.canonical_url} rel="noreferrer" target="_blank">

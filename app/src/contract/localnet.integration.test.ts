@@ -100,8 +100,9 @@ describe("frontend adapter to real ReleaseProof contract", () => {
     });
 
     const binding = [
-      "releaseproof-case-v1",
+      "releaseproof-case-v2",
       "reproducibility-v1",
+      "submit_case",
       input.repository,
       input.commitSha,
       input.artifactPath,
@@ -111,6 +112,12 @@ describe("frontend adapter to real ReleaseProof contract", () => {
     const submitted = await api.readCase(caseId);
     expect(submitted.state).toBe("SUBMITTED");
     expect(submitted.binding).toBe(binding);
+    expect(submitted.schema_version).toBe("releaseproof-case-v2");
+    expect(submitted.binding.split("|").slice(0, 3)).toEqual([
+      "releaseproof-case-v2",
+      "reproducibility-v1",
+      "submit_case",
+    ]);
 
     const resolvedHash = await api.resolveCase(caseId);
     const resolvedReceipt = (await api.waitForReceipt(resolvedHash)) as {
@@ -122,5 +129,7 @@ describe("frontend adapter to real ReleaseProof contract", () => {
     const resolved = await api.readCase(caseId);
     expect(["VERIFIED", "REJECTED", "UNRESOLVED"]).toContain(resolved.state);
     expect(resolved.binding).toBe(binding);
+    expect(resolved.schema_version).toBe("releaseproof-case-v2");
+    expect(resolved.observed_at).toBe(resolved.resolved_at);
   });
 });

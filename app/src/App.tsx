@@ -133,7 +133,7 @@ export default function App() {
             </ol>
           </section>
         </main>
-        <footer><span>Source of truth: GenLayer Intelligent Contract</span><span>releaseproof-case-v1</span></footer>
+        <footer><span>Source of truth: GenLayer Intelligent Contract</span><span>releaseproof-case-v2</span></footer>
       </div>
     </div>
   );

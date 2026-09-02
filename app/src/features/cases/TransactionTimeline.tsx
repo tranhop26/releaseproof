@@ -1,4 +1,5 @@
 import type { WorkspacePhase } from "./CaseWorkspace";
+import { transactionExplorerUrl, type GenLayerNetwork } from "../../contract/config";
 
 
 const phaseCopy: Record<WorkspacePhase, { title: string; detail: string }> = {
@@ -51,20 +52,27 @@ const milestoneCopy: Partial<Record<WorkspacePhase, string>> = {
 export function TransactionTimeline({
   phase,
   hash,
+  network,
   milestones = [],
 }: {
   phase: WorkspacePhase;
   hash?: string;
+  network: GenLayerNetwork;
   milestones?: WorkspacePhase[];
 }) {
   const active = phaseCopy[phase];
+  const explorerUrl = hash ? transactionExplorerUrl(hash, network) : undefined;
   return (
     <section className={`timeline phase-${phase}`} aria-live="polite">
       <div className="timeline-pulse" aria-hidden="true" />
       <div>
         <p className="timeline-title">{active.title}</p>
         <p className="timeline-detail">{active.detail}</p>
-        {hash && <p className="mono timeline-hash">{hash}</p>}
+        {hash && explorerUrl ? (
+          <a className="mono timeline-hash" href={explorerUrl} rel="noreferrer" target="_blank">{hash}</a>
+        ) : hash ? (
+          <p className="mono timeline-hash">{hash}</p>
+        ) : null}
         {milestones.length > 0 && (
           <ol aria-label="Transaction milestones" className="transaction-milestones">
             {milestones.map((milestone, index) => (

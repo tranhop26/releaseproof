@@ -175,8 +175,9 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
   }, {
     hash: firstHash,
     binding: [
-      "releaseproof-case-v1",
+      "releaseproof-case-v2",
       "reproducibility-v1",
+      "submit_case",
       "carbofozzz/questera",
       "52d0e41bbc351bd69bf270bec0143eba40413dcc",
       "README.md",
