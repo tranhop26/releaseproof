@@ -195,6 +195,10 @@ test("wallet submission reaches finalized contract readback and duplicate fails"
   for (const label of ["Schema", "Binding", "Observed", "Resolved"]) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
+  const schemaValue = page.locator(".readback-grid > div").filter({
+    has: page.locator("dt", { hasText: /^Schema$/ }),
+  }).locator("dd");
+  await expect(schemaValue).toHaveText("releaseproof-case-v2");
   await expect(page.getByTitle(expectedBinding)).toHaveText(expectedBinding);
   const observed = await page.locator(".readback-grid > div").filter({ hasText: /^Observed/ }).locator("dd").textContent();
   const resolved = await page.locator(".readback-grid > div").filter({ hasText: /^Resolved/ }).locator("dd").textContent();
