@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createReadClient,
@@ -27,6 +27,8 @@ export default function App() {
   const [walletApi, setWalletApi] = useState<ReleaseProofApi>();
   const [walletProvider, setWalletProvider] = useState<MetaMaskProvider>();
   const [walletError, setWalletError] = useState("");
+  const [walletConnecting, setWalletConnecting] = useState(false);
+  const mounted = useRef(true);
   const readApi = useMemo(() => {
     try {
       return createReleaseProofApi(createReadClient(), configuredContractAddress());
@@ -35,6 +37,13 @@ export default function App() {
     }
   }, []);
   const networkName = configuredNetworkName();
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!walletProvider?.on) return;
@@ -55,19 +64,24 @@ export default function App() {
   }, [walletProvider]);
 
   async function connectWallet() {
+    if (walletConnecting) return;
+    setWalletConnecting(true);
     try {
       setWalletError("");
       setWalletAddress("");
       setWalletApi(undefined);
       setWalletProvider(undefined);
       const connected = await connectMetaMask(window.ethereum, configuredChain());
+      if (!mounted.current) return;
       const client = createWalletClient(connected.address, connected.provider);
       const api = createReleaseProofApi(client, configuredContractAddress());
       setWalletProvider(connected.provider);
       setWalletAddress(connected.address);
       setWalletApi(api);
     } catch (error) {
-      setWalletError(walletErrorMessage(error));
+      if (mounted.current) setWalletError(walletErrorMessage(error));
+    } finally {
+      if (mounted.current) setWalletConnecting(false);
     }
   }
 
@@ -91,7 +105,12 @@ export default function App() {
       <div className="main-column" id="top">
         <header className="topbar">
           <div className="breadcrumb"><span>Registry</span><b>/</b><strong>Evidence workspace</strong></div>
-          <button className={walletAddress ? "wallet-button connected" : "wallet-button"} onClick={connectWallet} type="button">
+          <button
+            className={walletAddress ? "wallet-button connected" : "wallet-button"}
+            disabled={walletConnecting}
+            onClick={connectWallet}
+            type="button"
+          >
             <span className="wallet-indicator" />
             {walletAddress ? shortAddress(walletAddress) : "Connect MetaMask"}
           </button>

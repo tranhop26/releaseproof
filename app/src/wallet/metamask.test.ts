@@ -51,7 +51,8 @@ describe("connectMetaMask", () => {
       eth_requestAccounts: [address],
       eth_chainId: "0x1",
       wallet_switchEthereumChain: null,
-      wallet_getSnaps: { [snapId]: { id: snapId } },
+      wallet_getSnaps: { [snapId]: { id: snapId, enabled: true, blocked: false } },
+      eth_accounts: [address],
     });
 
     await expect(connectMetaMask(metamask, studionet)).resolves.toEqual({
@@ -81,8 +82,9 @@ describe("connectMetaMask", () => {
           return null;
         }
         if (method === "wallet_getSnaps") {
-          return { [snapId]: { id: snapId } };
+          return { [snapId]: { id: snapId, enabled: true, blocked: false } };
         }
+        if (method === "eth_accounts") return [address];
         if (method === "wallet_addEthereumChain") return null;
         throw new Error(`Unexpected wallet method: ${method}`);
       }),
@@ -104,7 +106,8 @@ describe("connectMetaMask", () => {
     const metamask = provider({
       eth_requestAccounts: [address],
       eth_chainId: "0xf22f",
-      wallet_getSnaps: { [snapId]: { id: snapId } },
+      wallet_getSnaps: { [snapId]: { id: snapId, enabled: true, blocked: false } },
+      eth_accounts: [address],
     });
 
     await connectMetaMask(metamask, studionet);
@@ -119,7 +122,10 @@ describe("connectMetaMask", () => {
       eth_requestAccounts: [address],
       eth_chainId: "0xf22f",
       wallet_getSnaps: {},
-      wallet_requestSnaps: { [snapId]: { id: snapId } },
+      wallet_requestSnaps: {
+        [snapId]: { id: snapId, enabled: true, blocked: false },
+      },
+      eth_accounts: [address],
     });
 
     await connectMetaMask(metamask, studionet);
@@ -144,7 +150,73 @@ describe("connectMetaMask", () => {
     };
 
     await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
-      "GenLayer Snap setup failed: MetaMask does not support the required Snap method",
+      "GenLayer Snap setup failed: MetaMask does not support the requested method",
+    );
+  });
+
+  it("identifies unsupported network methods as network setup failures", async () => {
+    const metamask: MetaMaskProvider = {
+      isMetaMask: true,
+      request: vi.fn(async ({ method }) => {
+        if (method === "eth_requestAccounts") return [address];
+        if (method === "eth_chainId") return "0x1";
+        if (method === "wallet_switchEthereumChain") {
+          throw { code: 4200, message: "Unsupported method" };
+        }
+        throw new Error(`Unexpected wallet method: ${method}`);
+      }),
+    };
+
+    await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
+      "MetaMask network setup failed: MetaMask does not support the requested method",
+    );
+  });
+
+  it("rejects an account that changes while network or Snap approval is open", async () => {
+    const nextAddress = "0x1111111111111111111111111111111111111111";
+    const metamask = provider({
+      eth_requestAccounts: [address],
+      eth_chainId: "0xf22f",
+      wallet_getSnaps: { [snapId]: { id: snapId, enabled: true, blocked: false } },
+      eth_accounts: [nextAddress],
+    });
+
+    await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
+      "MetaMask account changed during connection",
+    );
+  });
+
+  it("requests approval again when the installed Snap is disabled", async () => {
+    const metamask = provider({
+      eth_requestAccounts: [address],
+      eth_chainId: "0xf22f",
+      wallet_getSnaps: {
+        [snapId]: { id: snapId, enabled: false, blocked: false },
+      },
+      wallet_requestSnaps: {
+        [snapId]: { id: snapId, enabled: true, blocked: false },
+      },
+      eth_accounts: [address],
+    });
+
+    await connectMetaMask(metamask, studionet);
+
+    expect(metamask.request).toHaveBeenCalledWith({
+      method: "wallet_requestSnaps",
+      params: { [snapId]: {} },
+    });
+  });
+
+  it("rejects an invalid Snap approval result", async () => {
+    const metamask = provider({
+      eth_requestAccounts: [address],
+      eth_chainId: "0xf22f",
+      wallet_getSnaps: {},
+      wallet_requestSnaps: {},
+    });
+
+    await expect(connectMetaMask(metamask, studionet)).rejects.toThrow(
+      "GenLayer Snap setup failed: MetaMask did not enable the GenLayer Snap",
     );
   });
 
@@ -164,8 +236,8 @@ describe("walletErrorMessage", () => {
   it.each([
     [{ code: 4001 }, "MetaMask request was rejected"],
     [{ code: -32002 }, "MetaMask already has a pending request"],
-    [{ code: 4200 }, "MetaMask does not support the required Snap method"],
-    [{ code: -32601 }, "MetaMask does not support the required Snap method"],
+    [{ code: 4200 }, "MetaMask does not support the requested method"],
+    [{ code: -32601 }, "MetaMask does not support the requested method"],
     [{ message: "Network is unavailable" }, "Network is unavailable"],
     [null, "MetaMask connection failed"],
   ])("maps provider failure %#", (error, expected) => {

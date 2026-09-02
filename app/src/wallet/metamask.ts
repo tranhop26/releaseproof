@@ -46,7 +46,7 @@ export function walletErrorMessage(error: unknown): string {
     return "MetaMask already has a pending request. Open MetaMask and complete it.";
   }
   if (code === 4200 || code === -32601) {
-    return "MetaMask does not support the required Snap method. Update desktop MetaMask and try again.";
+    return "MetaMask does not support the requested method. Update desktop MetaMask and try again.";
   }
   if (error instanceof Error && error.message.trim()) return error.message;
   if (error && typeof error === "object" && "message" in error) {
@@ -106,16 +106,25 @@ async function ensureSnap(provider: MetaMaskProvider) {
   const snaps = installed && typeof installed === "object"
     ? Object.values(installed)
     : [];
-  if (snaps.some((snap) => (
+  const isReady = (snap: unknown) => (
     snap
     && typeof snap === "object"
     && (snap as { id?: unknown }).id === GENLAYER_SNAP_ID
-  ))) return;
+    && (snap as { enabled?: unknown }).enabled !== false
+    && (snap as { blocked?: unknown }).blocked !== true
+  );
+  if (snaps.some(isReady)) return;
 
-  await provider.request({
+  const approved = await provider.request({
     method: "wallet_requestSnaps",
     params: { [GENLAYER_SNAP_ID]: {} },
   });
+  const approvedSnaps = approved && typeof approved === "object"
+    ? Object.values(approved)
+    : [];
+  if (!approvedSnaps.some(isReady)) {
+    throw new Error("MetaMask did not enable the GenLayer Snap.");
+  }
 }
 
 export async function connectMetaMask(
@@ -154,6 +163,16 @@ export async function connectMetaMask(
     throw new Error(
       `GenLayer Snap setup failed: ${walletErrorMessage(error)}`,
       { cause: error },
+    );
+  }
+  const currentAccounts = await provider.request({ method: "eth_accounts" });
+  if (
+    !Array.isArray(currentAccounts)
+    || typeof currentAccounts[0] !== "string"
+    || currentAccounts[0].toLowerCase() !== accounts[0].toLowerCase()
+  ) {
+    throw new Error(
+      "MetaMask account changed during connection. Reconnect to continue safely.",
     );
   }
   return { address: accounts[0], provider };

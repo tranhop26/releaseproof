@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
@@ -50,7 +51,7 @@ describe("MetaMask connection", () => {
     });
     vi.mocked(connectMetaMask).mockReturnValue(preparation);
 
-    render(<App />);
+    render(<StrictMode><App /></StrictMode>);
     fireEvent.click(screen.getByRole("button", { name: "Connect MetaMask" }));
 
     expect(screen.getByRole("button", { name: "Connect MetaMask" })).toBeVisible();
@@ -76,6 +77,19 @@ describe("MetaMask connection", () => {
     );
     expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
     expect(createWalletClient).not.toHaveBeenCalled();
+  });
+
+  it("serializes connection attempts while MetaMask approval is pending", async () => {
+    vi.mocked(connectMetaMask).mockReturnValue(new Promise(() => undefined));
+
+    render(<App />);
+    const button = screen.getByRole("button", { name: "Connect MetaMask" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(connectMetaMask).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "Submit evidence" })).toBeDisabled();
   });
 
   it("invalidates the wallet when the selected MetaMask provider changes", async () => {
