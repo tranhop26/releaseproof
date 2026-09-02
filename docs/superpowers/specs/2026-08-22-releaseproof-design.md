@@ -20,7 +20,7 @@ terminal result: it preserves `SUBMITTED` and permits a later retry.
 | Actor | Cannot trust | Can manipulate | Contract defense | Test/evidence |
 |---|---|---|---|---|
 | Researcher | A single reviewer or frontend operator | Mutable branch contents, prose claims, omitted files | Require repository owner/name, 40-character commit SHA, artifact path, evidence hash, and fixed policy version | Reject malformed/missing bindings; direct tests for replay and mismatched identity |
-| Reader/funder | Researcher | Self-select a favorable result or later change evidence | Validators fetch only the canonical GitHub API/raw URLs derived by the contract from the pinned commit | Integration readback shows stored source binding and terminal result |
+| Reader/funder | Researcher | Self-select a favorable result or later change evidence | Validators fetch only the canonical `raw.githubusercontent.com/<owner>/<repo>/<commit>/<path>` URL derived by the contract from the pinned commit | Integration readback shows stored source binding and terminal result |
 | Resolver | Researcher and frontend | Call repeatedly, substitute evidence, or choose outcome | Resolver supplies only `case_id`; contract loads immutable evidence and computes the decision | Unauthorized mutation is impossible; repeated resolve and terminal replay tests |
 | Validator | Leader validator | Return plausible JSON with a different semantic judgment | Validator independently fetches the same evidence and compares policy outcome plus criterion-level booleans | Consensus disagreement produces no favorable default and is covered by direct tests |
 | Contract owner/deployer | All users | Upgrade logic or rewrite a result | `INTENTIONALLY_FROZEN`; no owner, admin, upgrade, delete, or result-edit method | Schema/source review and tests prove privileged paths do not exist |
@@ -53,7 +53,7 @@ write rolls back, the case remains `SUBMITTED`, and a later retry is allowed.
 
 Each case stores:
 
-- source: GitHub only, accessed through canonical HTTPS API/raw endpoints;
+- source: GitHub only, accessed through the canonical `https://raw.githubusercontent.com/<owner>/<repo>/<commit>/<path>` URL;
 - subject: lowercase `owner/repository` plus exact 40-character commit SHA;
 - artifact identity: normalized repository-relative Markdown path;
 - submitter: transaction sender;
